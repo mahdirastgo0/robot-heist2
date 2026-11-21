@@ -1,0 +1,1 @@
+Put the Survival_Character texture files here (Jacket_BaseColor.jpg, Jacket_Normal.jpg, Jeans_BaseColor.jpg, Shoes_BaseColor.jpg, Gloves_BaseColor.jpg, Backpack_BaseColor.jpg, HairBrown_Diffuse_2.jpg, Eyebrows_BaseColor.jpg, Body_BaseColor.1001.png ...). They are applied automatically; otherwise solid colors are used.
