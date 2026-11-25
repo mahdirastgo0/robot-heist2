@@ -65,7 +65,7 @@ public class DriveCar : MonoBehaviour
     }
     void LateUpdate(){if(Driver==null&&Mathf.Abs(wheelSteering)>.001f)UpdateWheelVisuals(0,0,Time.deltaTime);}
     public bool Enter(PlayerController p)
-    { if(Driver!=null || GameManager.Flat(p.transform.position-transform.position).magnitude>3.8f) return false; Driver=p; Speed=0; Throttle=0; return true; }
+    { if(Driver!=null || GameManager.Flat(p.transform.position-transform.position).magnitude>3.8f) return false; Driver=p; Speed=0; Throttle=0; if(GameAudio.I!=null)GameAudio.I.VehicleStart(Type); return true; }
     public bool TryExit(out Vector3 pos)
     {
         foreach(Vector3 dir in new[]{transform.right,-transform.right,-transform.forward,transform.forward})
@@ -124,7 +124,7 @@ public class DriveCar : MonoBehaviour
         {
             Quaternion rot=transform.rotation*Quaternion.Euler(0,turn*dt/steps,0);
             Vector3 p=transform.position+rot*Vector3.forward*(Speed*dt/steps);
-            if(!CanMove(p,rot)){Speed=0;break;}
+            if(!CanMove(p,rot)){if(GameAudio.I!=null)GameAudio.I.VehicleCrash(Mathf.Abs(Speed));Speed=0;break;}
             traveled+=Vector3.Distance(transform.position,p)*Mathf.Sign(Speed);
             transform.SetPositionAndRotation(p,rot); Physics.SyncTransforms();
         }

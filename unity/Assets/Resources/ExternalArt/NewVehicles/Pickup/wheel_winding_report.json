@@ -1,0 +1,90 @@
+{
+  "triangles_total": 431593,
+  "triangles_rewound": 55048,
+  "parts": [
+    {
+      "part": "Wheel_BRC",
+      "triangles": 20892,
+      "before": 0.9999042695768715,
+      "after": 0.9999042695768715,
+      "flipped": false
+    },
+    {
+      "part": "Wheel_ARO",
+      "triangles": 6312,
+      "before": 1.0,
+      "after": 1.0,
+      "flipped": false
+    },
+    {
+      "part": "Wheel_BRC|0|0",
+      "triangles": 21212,
+      "before": 9.428625306430322e-05,
+      "after": 0.9999057137469357,
+      "flipped": true
+    },
+    {
+      "part": "Wheel_ARO|0|0",
+      "triangles": 6312,
+      "before": 0.0,
+      "after": 1.0,
+      "flipped": true
+    },
+    {
+      "part": "Wheel_BRC|1|0",
+      "triangles": 21212,
+      "before": 0.9999057137469357,
+      "after": 0.9999057137469357,
+      "flipped": false
+    },
+    {
+      "part": "Wheel_ARO|1|0",
+      "triangles": 6312,
+      "before": 1.0,
+      "after": 1.0,
+      "flipped": false
+    },
+    {
+      "part": "Wheel_BRC|3|0",
+      "triangles": 20892,
+      "before": 0.9999042695768715,
+      "after": 0.9999042695768715,
+      "flipped": false
+    },
+    {
+      "part": "Wheel_ARO|3|0",
+      "triangles": 6424,
+      "before": 1.0,
+      "after": 1.0,
+      "flipped": false
+    },
+    {
+      "part": "Wheel_PRF|3|0",
+      "triangles": 208,
+      "before": 1.0,
+      "after": 1.0,
+      "flipped": false
+    },
+    {
+      "part": "Wheel_BRC|2|0",
+      "triangles": 20892,
+      "before": 9.573042312847023e-05,
+      "after": 0.9999042695768715,
+      "flipped": true
+    },
+    {
+      "part": "Wheel_ARO|2|0",
+      "triangles": 6312,
+      "before": 0.0,
+      "after": 1.0,
+      "flipped": true
+    },
+    {
+      "part": "Wheel_PRF|2|0",
+      "triangles": 320,
+      "before": 0.0,
+      "after": 1.0,
+      "flipped": true
+    }
+  ]
+}

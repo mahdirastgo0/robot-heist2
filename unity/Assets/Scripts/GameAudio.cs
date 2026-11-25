@@ -214,12 +214,11 @@ public class GameAudio : MonoBehaviour
     {
         string[] names={"pistol","smg","shotgun","rifle","lmg"};
         for (int w = 0; w < NativeCore.WeaponCount; w++) {
-            shotV[w] = LoadSet("Audio/shot_" + w + "_", 3);
-            combatShots[w]=Resources.Load<AudioClip>("Audio/combat_"+names[w]);
-            if(combatShots[w]==null) Debug.LogError("Missing combat audio: "+names[w]);
-            else combatShots[w].LoadAudioData();
+            shotV[w] = LoadSet("Audio/CombatV3/"+names[w]+"_", 3);
+            if(shotV[w]==null) Debug.LogError("Missing CombatV3 clips: "+names[w]);
+            else foreach(var clip in shotV[w]) clip.LoadAudioData();
         }
-        farV = LoadSet("Audio/shotfar_", 2);
+        farV = LoadSet("Audio/CombatV3/police_far_", 3);
         for (int w = 0; w < NativeCore.WeaponCount; w++) reloadW[w] = Resources.Load<AudioClip>("Audio/reload_w" + w);
         equipW = Resources.Load<AudioClip>("Audio/equip");
         shellV = LoadSet("Audio/shell_", 2);
@@ -271,7 +270,7 @@ public class GameAudio : MonoBehaviour
     public void Shot(int weapon)
     {
         int wi = Mathf.Clamp(weapon, 0, shotV.Length - 1);
-        var c = combatShots[wi] ?? Pick(shotV[wi]) ?? shot[wi];
+        var c = Pick(shotV[wi]);
         if(c==null) return;
         gunSource.volume=GameOptions.Effects;
         gunSource.PlayOneShot(c,ShotVol[wi]*(wi==1||wi==4 ? .72f : .90f));
@@ -283,8 +282,7 @@ public class GameAudio : MonoBehaviour
         float dist = 0f;
         var cam = Camera.main;
         if (cam != null) dist = Vector3.Distance(cam.transform.position, pos);
-        var c = combatShots[0] ?? (dist > 35f ? Pick(farV) : Pick(shotV[0]));
-        if (c == null) c = copShot;
+        var c = dist > 35f ? Pick(farV) : Pick(shotV[0]);
         PlaySpatial(c, pos, dist > 35f ? 1f : 0.9f);
     }
 
