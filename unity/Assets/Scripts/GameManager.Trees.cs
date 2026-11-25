@@ -253,34 +253,32 @@ public partial class GameManager
         externalTrees = Resources.LoadAll<GameObject>("Models/Trees");
     }
 
+    readonly Dictionary<string,Material> treeArtCache=new Dictionary<string,Material>();
+    Material[] TreeArtMaterials(Material[] originals,string name)
+    {
+        string key=name.Replace("(Clone)","").Trim();
+        var t=Resources.Load<Texture2D>("Models/Trees/"+key+"_Albedo");if(t==null)return originals;
+        if(!treeArtCache.TryGetValue(key,out Material m)){m=ImportedMaterial(key,t,null,Color.white,.12f);treeArtCache[key]=m;}
+        for(int i=0;i<originals.Length;i++)originals[i]=m;return originals;
+    }
     // یه درخت تو جای مشخص میکاره (مدل دانلودی اگه باشه، وگرنه درخت ساخته‌شده با کد)
     void SpawnTree(Vector3 pos, float yaw, float scale, System.Random rng)
     {
-        if (externalTrees != null && externalTrees.Length > 0 && rng.Next(0, 10) < 8)
+        if(externalTrees!=null && externalTrees.Length>0 && rng.Next(0,10)<6)
         {
-            try
+            var anchor=new GameObject("Imported tree").transform;anchor.SetParent(root,false);anchor.position=pos;
+            var inst=Instantiate(externalTrees[rng.Next(0,externalTrees.Length)],anchor,false);
+            if(FitArt(inst,new Vector3(5f*scale,6.5f*scale,5f*scale),0))
             {
-                var prefab = externalTrees[rng.Next(0, externalTrees.Length)];
-                var inst = Instantiate(prefab);
-                inst.transform.SetParent(scn, false);
-                inst.transform.position = pos;
-                inst.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-                var rs = inst.GetComponentsInChildren<Renderer>();
-                if (rs.Length > 0)
-                {
-                    Bounds b = rs[0].bounds;
-                    foreach (var rr in rs) b.Encapsulate(rr.bounds);
-                    float k = (6.5f * scale) / Mathf.Max(0.5f, b.size.y);
-                    inst.transform.localScale *= k;
-                    b = rs[0].bounds;
-                    foreach (var rr in rs) b.Encapsulate(rr.bounds);
-                    inst.transform.position += new Vector3(0f, pos.y - b.min.y, 0f);
-                }
-                var cc0 = inst.AddComponent<CapsuleCollider>();
-                cc0.radius = 0.3f; cc0.height = 3f; cc0.center = new Vector3(0f, 1.5f / Mathf.Max(0.01f, inst.transform.localScale.y), 0f);
-                return;
+                anchor.rotation=Quaternion.Euler(0,yaw,0);
+                var rs=inst.GetComponentsInChildren<Renderer>();
+                foreach(var r in rs)r.sharedMaterials=TreeArtMaterials(r.sharedMaterials,inst.name);
+                var lod=anchor.gameObject.AddComponent<LODGroup>();
+                if(treeVariants.Count>0){var distantVariant=treeVariants[rng.Next(0,treeVariants.Count)];var low=new GameObject("Distant tree");low.transform.SetParent(anchor,false);low.transform.localScale=Vector3.one*scale;low.AddComponent<MeshFilter>().sharedMesh=distantVariant.mesh;var lr=low.AddComponent<MeshRenderer>();lr.sharedMaterials=distantVariant.mats;lod.SetLODs(new[]{new LOD(.13f,rs),new LOD(.012f,new Renderer[]{lr})});}
+                else lod.SetLODs(new[]{new LOD(.02f,rs)});
+                lod.RecalculateBounds();var cc0=anchor.gameObject.AddComponent<CapsuleCollider>();cc0.radius=.28f;cc0.height=3f;cc0.center=Vector3.up*1.5f;return;
             }
-            catch (System.Exception e) { Debug.LogWarning("External tree failed: " + e.Message); }
+            RemoveArt(anchor.gameObject);
         }
         if (treeVariants.Count == 0) return;
         var tv = treeVariants[rng.Next(0, treeVariants.Count)];

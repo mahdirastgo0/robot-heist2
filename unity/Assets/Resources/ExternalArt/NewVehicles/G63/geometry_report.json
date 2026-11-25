@@ -1,0 +1,12 @@
+{
+  "source": "Mercedes-Benz_G63_AMG.blend",
+  "vertices": 637740,
+  "triangles": 1038918,
+  "dimensions": [
+    1.8499999046325684,
+    1.6541322469711304,
+    4.139651298522949
+  ],
+  "runtime_triangles": 189490,
+  "runtime_vertices": 154915
+}

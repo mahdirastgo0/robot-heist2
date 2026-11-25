@@ -54,6 +54,7 @@ public partial class GameManager
         GUI.matrix = Matrix4x4.Scale(new Vector3(s, s, 1f));
         float W = Screen.width / s, H = 720f;
         InitStyles();
+        if (settingsOpen) { DrawSettings(W,H); return; }
 
         if (State == GameState.Menu || !NativeCore.Available) { DrawMenu(W, H); return; }
         if (State == GameState.Loading) { DrawLoading(W, H); return; }
@@ -69,6 +70,7 @@ public partial class GameManager
     void DrawMenu(float W, float H)
     {
         Fill(new Rect(0, 0, W, H), new Color(0, 0, 0, 0.72f));
+        if(GUI.Button(new Rect(W-150,18,132,38),"Settings",sBtn))settingsOpen=true;
         float bw = 700, x = (W - bw) / 2, y = 50;
         GUI.Label(new Rect(x, y, bw, 60), "ROBOT HEIST", sBig); y += 64;
         GUI.Label(new Rect(x, y, bw, 30), "Rob shops. Sell the loot. Escape the robot cops.", sCenter); y += 46;
@@ -83,10 +85,10 @@ public partial class GameManager
         {
             string[] lines =
             {
-                "WASD  move          Mouse  look / aim",
-                "Left mouse  shoot     R  reload     Shift  sprint",
-                "1-5  switch weapon     E  interact     T  tech tree (base)     M  big map",
-                "K  music on/off     Esc  pause",
+                GameOptions.KeyLabel(0)+"/"+GameOptions.KeyLabel(2)+"/"+GameOptions.KeyLabel(1)+"/"+GameOptions.KeyLabel(3)+" move      "+GameOptions.KeyLabel(16)+" aim / strafe",
+                GameOptions.KeyLabel(15)+" shoot    "+GameOptions.KeyLabel(9)+" reload    "+GameOptions.KeyLabel(4)+" sprint    "+GameOptions.KeyLabel(5)+" walk",
+                "Weapon keys in Settings    "+GameOptions.KeyLabel(8)+" interact    "+GameOptions.KeyLabel(14)+" tech    "+GameOptions.KeyLabel(12)+" map",
+                GameOptions.KeyLabel(6)+" jump    "+GameOptions.KeyLabel(7)+" crouch    "+GameOptions.KeyLabel(10)+" car    "+GameOptions.KeyLabel(13)+" garage    Esc pause",
                 "",
                 "1. Pick a server. Every server starts from zero.",
                 "2. Choose a land on the world map. Higher lands need a higher house level.",
@@ -152,8 +154,9 @@ public partial class GameManager
         Fill(new Rect(0, 0, W, H), new Color(0, 0, 0, 0.55f));
         GUI.Label(new Rect(0, H / 2 - 110, W, 70), "PAUSED", sBig);
         if (GUI.Button(new Rect(W / 2 - 130, H / 2 - 20, 260, 44), "Resume (Esc)", sBtn)) paused = false;
+        if (GUI.Button(new Rect(W / 2 - 130,H / 2 + 34,260,44),"Settings",sBtn)) settingsOpen=true;
         if (State == GameState.Base)
-            if (GUI.Button(new Rect(W / 2 - 130, H / 2 + 34, 260, 44), "Switch server", sBtn)) LeaveToServerSelect();
+            if (GUI.Button(new Rect(W / 2 - 130, H / 2 + 88, 260, 44), "Switch server", sBtn)) LeaveToServerSelect();
     }
 
     // ---------------------------------------------------------------- HUD
@@ -182,7 +185,7 @@ public partial class GameManager
             var r = new Rect(W - 20 - (NativeCore.WeaponCount - i) * 56, H - 56, 52, 30);
             bool owned = NativeCore.OwnsWeapon(i);
             Fill(r, i == p.weapon ? new Color(1f, 0.8f, 0.2f, 0.9f) : new Color(0, 0, 0, owned ? 0.6f : 0.3f));
-            Text(r, (i + 1).ToString(), sCenter, i == p.weapon ? Color.black : (owned ? Color.white : Color.gray));
+            Text(r, GameOptions.Keys[17+i].ToString().Replace("Alpha",""), sCenter, i == p.weapon ? Color.black : (owned ? Color.white : Color.gray));
         }
 
         // پول، سیکل و jail time
@@ -211,7 +214,7 @@ public partial class GameManager
         }
 
         // نشانه‌گیر
-        if (!InputBlocked)
+        if (!InputBlocked && !Player.Driving)
         {
             float cx = W / 2, cy = H / 2;
             Color cc = new Color(1, 1, 1, 0.9f);
@@ -219,6 +222,12 @@ public partial class GameManager
             Fill(new Rect(cx - 10, cy - 1, 6, 2), cc); Fill(new Rect(cx + 4, cy - 1, 6, 2), cc);
         }
 
+        if(State==GameState.Base && !InputBlocked) Text(new Rect(W/2-250,H-115,500,24),GameOptions.KeyLabel(13)+" - Vehicle dealer / garage",sSmallC,Color.white);
+        if(State==GameState.City && personalCar!=null && !InputBlocked)
+        {
+            string carHint = Player.Driving ? GameOptions.KeyLabel(10)+": exit when stopped  |  "+GameOptions.KeyLabel(11)+": brake  |  "+GameOptions.KeyLabel(23)+": horn  |  " + Mathf.RoundToInt(Mathf.Abs(personalCar.Speed)*3.6f) + " km/h" : (Flat(Player.transform.position-personalCar.transform.position).magnitude<4f ? GameOptions.KeyLabel(10)+": enter " + personalCar.DisplayName : "");
+            if(carHint.Length>0) Text(new Rect(W/2-260,H-210,520,28),carHint,sCenter,Color.white);
+        }
         // راهنما و نوار جستجو / هک
         if (hint.Length > 0 && !InputBlocked)
         {
@@ -360,18 +369,23 @@ public partial class GameManager
         if (Player == null) return;
         float size = 240f;
         var r = new Rect(W - size - 12, 12, size, size);
-        DrawMapView(r, Player.transform.position, size / 120f, false);
-        Text(new Rect(r.x, r.yMax + 1, size, 18), "M - full map", sSmallC, new Color(1f, 1f, 1f, 0.65f));
+        DrawMapView(r, MapPlayerTransform().position, size / 120f, false);
+        Text(new Rect(r.x, r.yMax + 1, size, 18), GameOptions.KeyLabel(12)+" - full map", sSmallC, new Color(1f, 1f, 1f, 0.65f));
 
         if (bigMap)
         {
             Fill(new Rect(0, 0, W, H), new Color(0f, 0f, 0f, 0.72f));
-            float bs = Mathf.Min(H - 80f, W - 360f);
-            float mx = Mathf.Max(20f, (W - bs - 300f) * 0.5f);
-            var br = new Rect(mx, 56f, bs, bs);
+            // Use the actual world aspect ratio, including all walkable beach edges.
+            float worldWidth = (CW - 1) * Cell + 34f;
+            float worldHeight = (CH - 1) * Cell + 34f;
+            float legendWidth = Mathf.Clamp(W * .23f, 190f, 280f);
+            float ppm = Mathf.Min((W - legendWidth - 66f) / (worldWidth + 32f), (H - 112f) / (worldHeight + 32f));
+            float mw = (worldWidth + 32f) * ppm, mh = (worldHeight + 32f) * ppm;
+            float mx = Mathf.Max(18f, (W - legendWidth - 32f - mw) * .5f);
+            var br = new Rect(mx, (H - mh) * .5f, mw, mh);
             GUI.Label(new Rect(0, 8, W, 40), curLand.name.ToUpper() + " - FULL MAP", sMid);
-            DrawMapView(br, MapCenterWorld(), bs / (Mathf.Max(CW, CH) * Cell + 18f), true);
-            DrawMapLegend(new Rect(br.xMax + 24f, 70f, 280f, 520f));
+            DrawMapView(br, MapCenterWorld(), ppm, true);
+            DrawMapLegend(new Rect(W - legendWidth - 12f, 70f, legendWidth, 550f));
         }
     }
 
@@ -389,9 +403,9 @@ public partial class GameManager
             Text(new Rect(r.x + 56, y + 2, r.width - 64, 24), names[i], sSmall, Color.white);
             y += 32;
         }
-        var tp = Icon("ic_player");
+        var tp = PlayerMapArrow(0f);
         if (tp != null) { var old = GUI.color; GUI.color = Color.white; GUI.DrawTexture(new Rect(r.x + 18, y + 2, 24, 24), tp); GUI.color = old; }
-        Text(new Rect(r.x + 56, y + 2, r.width - 64, 24), "You (points where you look)", sSmall, Color.white);
+        Text(new Rect(r.x + 56, y + 2, r.width - 64, 24), "YOU / facing direction", sSmall, Color.white);
         y += 40;
         Text(new Rect(r.x + 12, y, r.width - 24, 20), "Ring around a shop:", sTiny, new Color(0.8f, 0.82f, 0.88f)); y += 22;
         string[] rn = { "red = alarm armed", "green = alarm disabled", "flashing = alarm ringing", "gray = cleaned out" };
@@ -411,12 +425,15 @@ public partial class GameManager
         float cx = r.width * 0.5f, cy = r.height * 0.5f;
         Fill(new Rect(0, 0, r.width, r.height), Color.Lerp(new Color(0.06f, 0.27f, 0.44f), curLand.fog, 0.15f));   // دریا
 
-        Vector3 mid = MapCenterWorld();
-        float gx = (CW - 1) * Cell + 14f, gz = (CH - 1) * Cell + 14f;
-        MapRect(cx, cy, ppm, center, mid, gx + 1.6f, gz + 1.6f, new Color(0.6f, 0.62f, 0.66f));                       // اسکله
-        MapRect(cx, cy, ppm, center, mid, gx, gz, Color.Lerp(curLand.asphalt, new Color(0.2f, 0.2f, 0.23f), 0.6f));   // جاده‌ها
+        for (int i=0;i<3;i++)
+        {
+            MapRect(cx,cy,ppm,center,IslandCenter(i),IslandWidth+34f,IslandDepth+34f,new Color(.83f,.73f,.51f));
+            MapRect(cx,cy,ppm,center,IslandCenter(i),IslandWidth+14f,IslandDepth+14f,Color.Lerp(curLand.asphalt,new Color(.2f,.2f,.23f),.6f));
+            if(i<2) MapRect(cx,cy,ppm,center,BridgeCenter(i),48f,10f,new Color(.42f,.43f,.46f));
+        }
+        if(personalCar!=null) MapRect(cx,cy,ppm,center,personalCar.transform.position,5f,5f,new Color(.15f,.85f,1f));
 
-        float iconS = big ? 30f : 19f;
+        float iconS = big ? 15f : 19f;
         foreach (var b in blockInfos)
         {
             Vector3 c = CellToWorld(new Vector2Int(b.x + 1, b.y + 1));
@@ -485,30 +502,8 @@ public partial class GameManager
         Text(new Rect(8 + bar + 4, r.height - 20, 50, 16), "20 m", sTiny, Color.white);
         Fill(new Rect(cx - 11, 3, 22, 20), new Color(0f, 0f, 0f, 0.5f));
         Text(new Rect(cx - 11, 3, 22, 20), "N", sSmallC, Color.white);
+        DrawPlayerMapMarker(r, center, ppm, big);
         GUI.EndGroup();
-
-        // بازیکن: فلش به سمت نگاهت + مخروط دید.
-        // عمداً بیرون از BeginGroup و با مختصات مطلق کشیده میشه: RotateAroundPivot داخل گروه مرکز چرخش رو جابجا میکنه.
-        if (Player != null)
-        {
-            Vector2 lp = MapPt(r.width * 0.5f, r.height * 0.5f, ppm, center, Player.transform.position);
-            if (lp.x > 4f && lp.y > 4f && lp.x < r.width - 4f && lp.y < r.height - 4f)
-            {
-                Vector2 ap = new Vector2(r.x + lp.x, r.y + lp.y);
-                float edge = Mathf.Min(Mathf.Min(lp.x, r.width - lp.x), Mathf.Min(lp.y, r.height - lp.y));    // فاصله تا نزدیک‌ترین لبه
-                float yaw = cam != null ? cam.transform.eulerAngles.y : Player.transform.eulerAngles.y;
-                var tc = Icon("ic_cone");
-                var tp = Icon("ic_player");
-                float coneS = Mathf.Min((big ? 78f : 40f) * 2f, edge * 2f);
-                float ps = Mathf.Min(big ? 40f : 28f, edge * 2f);
-                Matrix4x4 old = GUI.matrix;
-                GUIUtility.RotateAroundPivot(yaw, ap);
-                if (tc != null) { GUI.color = new Color(1f, 1f, 0.7f, 0.8f); GUI.DrawTexture(new Rect(ap.x - coneS / 2f, ap.y - coneS / 2f, coneS, coneS), tc); GUI.color = Color.white; }
-                if (tp != null) GUI.DrawTexture(new Rect(ap.x - ps / 2f, ap.y - ps / 2f, ps, ps), tp);
-                else Fill(new Rect(ap.x - 4f, ap.y - 8f, 8f, 14f), Color.white);
-                GUI.matrix = old;
-            }
-        }
 
         // قاب
         Color fr = new Color(1f, 1f, 1f, 0.75f);
@@ -516,6 +511,53 @@ public partial class GameManager
         Fill(new Rect(r.x - 2, r.yMax, r.width + 4, 2), fr);
         Fill(new Rect(r.x - 2, r.y, 2, r.height), fr);
         Fill(new Rect(r.xMax, r.y, 2, r.height), fr);
+    }
+
+    Transform MapPlayerTransform()
+    {
+        if (personalCar != null && personalCar.Driver == Player) return personalCar.transform;
+        return Player.transform;
+    }
+
+    readonly Texture2D[] mapArrowTextures = new Texture2D[72];
+    Texture2D PlayerMapArrow(float yaw)
+    {
+        int heading=Mathf.RoundToInt(Mathf.Repeat(yaw,360f)/5f)%72;
+        if(mapArrowTextures[heading]!=null)return mapArrowTextures[heading];
+        float rad=heading*5f*Mathf.Deg2Rad, cs=Mathf.Cos(rad), sn=Mathf.Sin(rad);
+        // North-pointing white arrow with a dark outline. No dependency on imported icon alignment.
+        const int n = 64;
+        var mapArrowTexture = new Texture2D(n, n, TextureFormat.RGBA32, false);
+        var pixels = new Color32[n*n];
+        for (int y=0; y<n; y++) for (int x=0; x<n; x++)
+        {
+            float px=(x+0.5f)/n*2f-1f, py=(y+0.5f)/n*2f-1f;
+            float xx=cs*px-sn*py, yy=sn*px+cs*py;
+            bool outer=yy>=-.65f && yy<=.9f && Mathf.Abs(xx)<(.9f-yy)*.57f && yy>-.1f-Mathf.Abs(xx)*.83f;
+            bool inner=yy>=-.45f && yy<=.68f && Mathf.Abs(xx)<(.68f-yy)*.52f && yy>.02f-Mathf.Abs(xx)*.85f;
+            pixels[y*n+x]=inner?new Color32(255,255,255,255):outer?new Color32(10,19,27,255):new Color32(0,0,0,0);
+        }
+        mapArrowTexture.SetPixels32(pixels); mapArrowTexture.Apply(false,true); mapArrowTextures[heading]=mapArrowTexture;
+        return mapArrowTexture;
+    }
+    void DrawPlayerMapMarker(Rect r, Vector3 center, float ppm, bool big)
+    {
+        if (Player == null) return;
+        Transform tracked=MapPlayerTransform();
+        Vector2 p=MapPt(r.width*.5f,r.height*.5f,ppm,center,tracked.position);
+        // Map north is +Z. Use the occupied vehicle heading, otherwise actual camera heading.
+        Vector3 direction=Player.Driving?tracked.forward:(cam!=null?cam.transform.forward:tracked.forward);
+        float yaw=Mathf.Atan2(direction.x,direction.z)*Mathf.Rad2Deg;
+        float size=big?34f:27f;
+        var oldColor=GUI.color;
+        var disc=Icon("ic_disc");
+        if(disc!=null){GUI.color=new Color(.02f,.65f,.85f,1f);GUI.DrawTexture(new Rect(p.x-size*.5f,p.y-size*.5f,size,size),disc);}
+        else Fill(new Rect(p.x-5,p.y-5,10,10),new Color(.02f,.65f,.85f,1f));
+        // Draw a direction-specific texture; no GUI pivot transform or screen-resolution offset.
+        GUI.color=Color.white;
+        GUI.DrawTexture(new Rect(p.x-size*.5f,p.y-size*.5f,size,size),PlayerMapArrow(yaw));
+        GUI.color=oldColor;
+        if(big){float x=Mathf.Clamp(p.x-26f,1f,r.width-53f);float y=Mathf.Clamp(p.y+size*.48f,1f,r.height-20f);Fill(new Rect(x,y,52f,18f),new Color(.02f,.07f,.1f,.95f));Text(new Rect(x,y,52f,18f),"YOU",sSmallC,Color.white);}
     }
 
     // نقطه‌ی دنیا → پیکسل داخل نقشه (شمال = بالا، z مثبت = شمال)
@@ -536,7 +578,7 @@ public partial class GameManager
         Fill(new Rect(0, 0, W, H), new Color(0.35f, 0f, 0f, 0.6f));
         GUI.Label(new Rect(0, H / 2 - 90, W, 70), "BUSTED", sBig);
         GUI.Label(new Rect(0, H / 2 - 20, W, 30), deathMsg, sCenter);
-        GUI.Label(new Rect(0, H / 2 + 20, W, 30), "Press E to wake up at your base", sCenter);
+        GUI.Label(new Rect(0, H / 2 + 20, W, 30), "Press "+GameOptions.KeyLabel(8)+" to wake up at your base", sCenter);
     }
 
     // ---------------------------------------------------------------- Panels
@@ -549,6 +591,7 @@ public partial class GameManager
             case UiPanel.Tech: DrawTechPanel(W, H); break;
             case UiPanel.House: DrawHousePanel(W, H); break;
             case UiPanel.Map: DrawMapPanel(W, H); break;
+            case UiPanel.Vehicles: DrawVehiclePanel(W,H); break;
             case UiPanel.Summary: DrawSummaryPanel(W, H); break;
             case UiPanel.Intro: DrawIntroPanel(W, H); break;
             case UiPanel.Surrender: DrawSurrenderPanel(W, H); break;
@@ -781,11 +824,11 @@ public partial class GameManager
         string[] rows =
         {
             "Tier: " + d.tier,
-            "Size: " + ((d.bx * 6) * (int)Cell) + " x " + ((d.by * 6) * (int)Cell) + " m",
+            "3 islands: " + ((3*d.bx*6+24)*(int)Cell+34) + " x " + (d.by*6*(int)Cell+34) + " m",
             "Danger: " + d.danger,
             "Loot value: x" + (NativeCore.LandLootX100(mapSel) / 100f).ToString("0.00"),
             "Black market: x" + (NativeCore.LandMarketLo(mapSel) / 100f).ToString("0.00") + " - x" + (NativeCore.LandMarketHi(mapSel) / 100f).ToString("0.00"),
-            "Police at start: " + NativeCore.LandCopStart(mapSel),
+            "Police at start: " + Mathf.Max(3, NativeCore.LandCopStart(mapSel)+2-NativeCore.CopStartReduction),
             "Alarm: " + NativeCore.AlarmStars(0, mapSel) + "-" + NativeCore.AlarmStars(3, mapSel) + " stars",
             "Escapes this cycle: " + NativeCore.Profile(NativeCore.Land0 + mapSel)
         };

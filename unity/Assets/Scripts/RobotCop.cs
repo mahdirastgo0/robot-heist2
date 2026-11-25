@@ -12,6 +12,8 @@ public class RobotCop : MonoBehaviour
     float curSpeed;
     bool aimNow;
     float hp = 70f;
+    public bool IsRiot {get;private set;}
+    public bool IsAlive => hp>0f;
     Mode mode = Mode.Patrol;
     readonly List<Vector2Int> path = new List<Vector2Int>();
     int idx;
@@ -20,16 +22,17 @@ public class RobotCop : MonoBehaviour
 
     static readonly Color Calm = new Color(0.3f, 0.8f, 1f), Angry = new Color(1f, 0.15f, 0.1f);
 
-    public void Init(GameManager g, PlayerController p, Humanoid h)
+    public void Init(GameManager g, PlayerController p, Humanoid h, bool riot=false)
     {
         gm = g; player = p; human = h;
-        hp = 45f + gm.Wanted * 6f;
+        IsRiot=riot; hp = 45f + gm.Wanted * 6f + (riot?45f:0f);
         transform.rotation = Quaternion.Euler(0f, Random.Range(0, 4) * 90f, 0f);
         Paint(Calm);
     }
 
     public void TakeDamage(float d)
     {
+        if(hp<=0f)return;
         hp -= d;
         flash = 0.08f;
         Paint(Color.white);
@@ -37,6 +40,7 @@ public class RobotCop : MonoBehaviour
         if (hp <= 0f)
         {
             if (GameAudio.I != null) GameAudio.I.CopDown(transform.position);
+            foreach(var col in GetComponentsInChildren<Collider>())col.enabled=false;
             gm.CopKilled(this);
             Destroy(gameObject);
         }
@@ -44,7 +48,7 @@ public class RobotCop : MonoBehaviour
 
     void Update()
     {
-        if (gm == null || !gm.Running || player == null || player.health <= 0f) return;
+        if (hp<=0f || gm == null || !gm.Running || player == null || player.health <= 0f) return;
         float dt = Time.deltaTime;
         curSpeed = 0f; aimNow = false;
         if (flash > 0f) { flash -= dt; if (flash <= 0f) Paint(mode == Mode.Chase ? Angry : Calm); }
@@ -82,7 +86,7 @@ public class RobotCop : MonoBehaviour
                     path.AddRange(gm.FindPath(gm.WorldToCell(transform.position), gm.WorldToCell(lastSeen)));
                     idx = 0;
                 }
-                Follow(3.8f + gm.Wanted * 0.3f, !(sees && dist < 18f));
+                Follow((3.8f + gm.Wanted * 0.3f)*(IsRiot ? .85f : 1f), !(sees && dist < 18f));
             }
         }
         else
@@ -118,7 +122,7 @@ public class RobotCop : MonoBehaviour
         Vector3 a = transform.position + Vector3.up * 1.6f;
         Vector3 d = (pp + Vector3.up * 1.2f) - a;
         if (GameManager.RayIgnore(transform, a, d.normalized, d.magnitude, out RaycastHit h))
-            return h.collider.GetComponentInParent<PlayerController>() != null;
+            return h.collider.GetComponentInParent<PlayerController>() != null || (player.Driving && h.collider.GetComponentInParent<DriveCar>()!=null);
         return true;
     }
 

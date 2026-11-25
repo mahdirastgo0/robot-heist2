@@ -1,0 +1,7 @@
+newmtl Bark___S.jpg
+Kd 1 1 1
+Ks 0.45 0.45 0.45
+Ns 15
+illum 2
+map_Kd Bark___S_Albedo.jpg
+

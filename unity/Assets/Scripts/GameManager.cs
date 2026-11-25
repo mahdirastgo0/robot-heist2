@@ -15,8 +15,8 @@ public partial class GameManager : MonoBehaviour
     public int Wanted { get; private set; }
     public PlayerController Player { get; private set; }
     public Camera Cam => cam;
-    public bool Running => State == GameState.City && !paused;
-    public bool InputBlocked => !(State == GameState.Base || State == GameState.City) || CurrentPanel != UiPanel.None || paused;
+    public bool Running => State == GameState.City && !paused && !bigMap && CurrentPanel == UiPanel.None;
+    public bool InputBlocked => !(State == GameState.Base || State == GameState.City) || CurrentPanel != UiPanel.None || paused || settingsOpen || (State == GameState.City && bigMap);
     public float LastShotTime { get; private set; } = -10f;
     public Vector3 LastShotPos { get; private set; }
 
@@ -68,6 +68,7 @@ public partial class GameManager : MonoBehaviour
         bool ok = NativeCore.Init();
         if (!ok) fatalMsg = "C++ core not loaded (" + NativeCore.Error + ").\nRun native/build_windows.bat, then restart Unity.";
         SetupCameraAndLight();
+        GameOptions.Load();
         if (ok) BuildBase();   // پشت منوی اصلی دیده میشه
     }
 
@@ -129,12 +130,13 @@ public partial class GameManager : MonoBehaviour
     {
         UpdateCursor();
         UpdateAudio();
+        if(settingsOpen) return;
         if (!NativeCore.Available) return;
         if (Player != null && Player.Human != null) Player.Human.SetBag(bag.Count / (float)BagCap);
         if (State == GameState.Menu || State == GameState.Loading) return;
         DevKeys();
         FitSigns();
-        if (State == GameState.City && CurrentPanel == UiPanel.None && GameInput.MapDown()) bigMap = !bigMap;
+        if (State == GameState.City && CurrentPanel == UiPanel.None && !paused && GameInput.MapDown()) bigMap = !bigMap;
 
         if (State == GameState.Dead)
         {
@@ -148,9 +150,11 @@ public partial class GameManager : MonoBehaviour
             else if (CurrentPanel != UiPanel.None) CurrentPanel = UiPanel.None;
             else paused = !paused;
         }
+        if (paused) return;
         if (State == GameState.Base && CurrentPanel == UiPanel.None && GameInput.TechDown()) OpenPanel(UiPanel.Tech);
         toasts.RemoveAll(t => Time.time > t.until);
-        if (paused || CurrentPanel != UiPanel.None) return;
+        if (State == GameState.Base && CurrentPanel == UiPanel.None && GameInput.VehicleMenuDown()) OpenPanel(UiPanel.Vehicles);
+        if (paused || CurrentPanel != UiPanel.None || bigMap) return;
 
         UpdateSpots();
         if (State == GameState.City)
@@ -179,13 +183,14 @@ public partial class GameManager : MonoBehaviour
     {
         var a = GameAudio.I;
         if (a == null) return;
-        if (GameInput.MuteDown()) a.ToggleMusic();
+        if (!settingsOpen && GameInput.MuteDown()) a.ToggleMusic();
+        a.SirenState(State==GameState.City && !paused && !settingsOpen ? Wanted : 0);
         float b = 0f, c = 0f;
         switch (State)
         {
             case GameState.Menu:
-            case GameState.Base: b = 0.15f; break;
-            case GameState.City: c = Wanted >= 3 ? 0.08f : 0.13f; break;
+            case GameState.Base: b = 0.28f; break;
+            case GameState.City: c = Wanted >= 3 ? 0.22f : 0.30f; break;
             case GameState.Dead: b = 0.05f; break;
         }
         a.SetMood(b, c);
@@ -193,7 +198,7 @@ public partial class GameManager : MonoBehaviour
 
     void UpdateCursor()
     {
-        bool lockIt = (State == GameState.City || State == GameState.Base) && CurrentPanel == UiPanel.None && !paused;
+        bool lockIt = (State == GameState.City || State == GameState.Base) && CurrentPanel == UiPanel.None && !paused && !bigMap && !settingsOpen;
         Cursor.lockState = lockIt ? CursorLockMode.Locked : CursorLockMode.None;
         Cursor.visible = !lockIt;
     }
@@ -210,7 +215,7 @@ public partial class GameManager : MonoBehaviour
     void UpdateSpots()
     {
         hint = "";
-        if (Player == null) return;
+        if (Player == null || Player.Driving) { CancelHold(); return; }
         Vector3 pp = Player.transform.position;
 
         Spot near = null;
@@ -229,53 +234,53 @@ public partial class GameManager : MonoBehaviour
             case SpotType.Container:
                 if (near.kind == 4 && !NativeCore.CanDrill) { hint = near.label + " - needs the THERMAL DRILL (see Tech Tree)"; break; }
                 if (bag.Count + NativeCore.ContainerItems(near.kind) > BagCap) { hint = "Your bag is full! Sell the loot at the BLACK MARKET first."; break; }
-                hint = "Hold E to search: " + near.label;
+                hint = "Hold " + GameOptions.KeyLabel(8) + " to search: " + near.label;
                 HoldTick(near);
                 break;
 
             case SpotType.AlarmPanel:
                 if (near.shop.alarmTripped) { hint = "Too late - the alarm is already ringing!"; break; }
-                hint = "Hold E to disable the alarm (" + near.shop.name + ")";
+                hint = "Hold " + GameOptions.KeyLabel(8) + " to disable the alarm (" + near.shop.name + ")";
                 HoldTick(near);
                 break;
 
             case SpotType.Market:
-                hint = bag.Count > 0 ? "Press E to sell " + bag.Count + " item(s)  ($" + BagValue() + " -> $" + SellOffer() + ")" : "Black Market - your bag is empty";
+                hint = bag.Count > 0 ? "Press " + GameOptions.KeyLabel(8) + " to sell " + bag.Count + " item(s)  ($" + BagValue() + " -> $" + SellOffer() + ")" : "Black Market - your bag is empty";
                 if (GameInput.InteractDown()) SellLoot();
                 break;
 
             case SpotType.Exit:
-                hint = "Press E to leave the land and go to your base";
+                hint = "Press " + GameOptions.KeyLabel(8) + " to leave the land and go to your base";
                 if (GameInput.InteractDown()) TryExit();
                 break;
 
             case SpotType.Garage:
-                hint = "Press E - choose a land on the world map";
+                hint = "Press " + GameOptions.KeyLabel(8) + " - choose a land on the world map";
                 if (GameInput.InteractDown()) OpenPanel(UiPanel.Map);
                 break;
 
             case SpotType.WeaponDealer:
-                hint = "Press E - Weapon Dealer";
+                hint = "Press " + GameOptions.KeyLabel(8) + " - Weapon Dealer";
                 if (GameInput.InteractDown()) OpenPanel(UiPanel.Weapons);
                 break;
 
             case SpotType.ArmorLocker:
-                hint = "Press E - Armor Locker";
+                hint = "Press " + GameOptions.KeyLabel(8) + " - Armor Locker";
                 if (GameInput.InteractDown()) OpenPanel(UiPanel.Armor);
                 break;
 
             case SpotType.TechTerminal:
-                hint = "Press E - Tech Terminal" + (NativeCore.TechNewMask != 0 ? "  (NEW unlocks!)" : "");
+                hint = "Press " + GameOptions.KeyLabel(8) + " - Tech Terminal" + (NativeCore.TechNewMask != 0 ? "  (NEW unlocks!)" : "");
                 if (GameInput.InteractDown()) OpenPanel(UiPanel.Tech);
                 break;
 
             case SpotType.FederalDesk:
-                hint = "Press E - Federal hotline: turn yourself in early";
+                hint = "Press " + GameOptions.KeyLabel(8) + " - Federal hotline: turn yourself in early";
                 if (GameInput.InteractDown()) OpenPanel(UiPanel.Surrender);
                 break;
 
             case SpotType.HouseTerminal:
-                hint = "Press E - Upgrade your house";
+                hint = "Press " + GameOptions.KeyLabel(8) + " - Upgrade your house";
                 if (GameInput.InteractDown()) OpenPanel(UiPanel.House);
                 break;
         }
@@ -386,7 +391,7 @@ public partial class GameManager : MonoBehaviour
         if (bag.Count > 0 && !exitWarned)
         {
             exitWarned = true;
-            Toast("Your bag still holds $" + BagValue() + " of unsold loot! Press E again to leave without it.");
+            Toast("Your bag still holds $" + BagValue() + " of unsold loot! Press " + GameOptions.KeyLabel(8) + " again to leave without it.");
             return;
         }
         int cash = runCash;
@@ -453,7 +458,7 @@ public partial class GameManager : MonoBehaviour
     void BuyWeapon(int i)
     {
         int r = NativeCore.BuyWeapon(i);
-        if (r == 1) { Toast("Bought " + NativeCore.WeaponNames[i] + "! Press " + (i + 1) + " in the field to equip it."); if (GameAudio.I != null) GameAudio.I.Coin(); }
+        if (r == 1) { Toast("Bought " + NativeCore.WeaponNames[i] + "! Press " + GameOptions.KeyLabel(17+i) + " in the field to equip it."); if (GameAudio.I != null) GameAudio.I.Coin(); }
         else if (r == 0) Toast("Not enough money.");
         else if (r == -3) Toast("Your house level is too low for this weapon.");
     }
@@ -474,7 +479,7 @@ public partial class GameManager : MonoBehaviour
     public Vector3 CellToWorld(Vector2Int c) => new Vector3(c.x * Cell, 0f, -c.y * Cell);
     public Vector2Int WorldToCell(Vector3 p) => new Vector2Int(Mathf.RoundToInt(p.x / Cell), Mathf.RoundToInt(-p.z / Cell));
     public Vector2Int RandomWalkCell() => walkCells[Random.Range(0, walkCells.Count)];
-    public List<Vector2Int> FindPath(Vector2Int a, Vector2Int b) => NativeCore.FindPath(a, b);
+    public List<Vector2Int> FindPath(Vector2Int a, Vector2Int b) => NativeCore.FindPath(NearestWalkCell(a), NearestWalkCell(b));
 
     static readonly RaycastHit[] hitBuf = new RaycastHit[32];
 

@@ -1,0 +1,16 @@
+newmtl Gun
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+map_Kd Gun.png
+newmtl Gun_NONE
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+map_Kd Gun.png

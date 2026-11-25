@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public enum GameState { Menu, Base, Loading, City, Dead }
-public enum UiPanel { None, Weapons, Armor, Tech, House, Map, Summary, Intro, Surrender }
+public enum UiPanel { None, Weapons, Armor, Tech, House, Map, Summary, Intro, Surrender, Vehicles }
 public enum SpotType { Shop, Market, Exit, Garage, WeaponDealer, ArmorLocker, TechTerminal, HouseTerminal, FederalDesk, Container, AlarmPanel }
 
 // یه نقطه‌ی تعاملی: دروازه، فروشنده، ظرف لوت (قفسه/کابینت/صندوق...) یا پنل آلارم

@@ -1,0 +1,526 @@
+{
+  "materials": [
+    {
+      "name": "GT3_white",
+      "r": 0.83,
+      "g": 0.84,
+      "b": 0.82,
+      "smoothness": 0.58,
+      "metallic": 0.07,
+      "texture": ""
+    },
+    {
+      "name": "GT3_black",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Metal1_Inst",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_Fbx_Default_Material",
+      "r": 0.24,
+      "g": 0.25,
+      "b": 0.26,
+      "smoothness": 0.35,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Metal1_Inst1",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_black_matt",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_Mat_Black_2",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_black_shiny",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_silver",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_body",
+      "r": 0.76,
+      "g": 0.79,
+      "b": 0.81,
+      "smoothness": 0.8,
+      "metallic": 0.23,
+      "texture": ""
+    },
+    {
+      "name": "GT3_Mat_White_Inst",
+      "r": 0.83,
+      "g": 0.84,
+      "b": 0.82,
+      "smoothness": 0.58,
+      "metallic": 0.07,
+      "texture": ""
+    },
+    {
+      "name": "GT3_Mat_Black",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_chrome",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Metal2",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_chrome_d",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Car_Glass_Inst",
+      "r": 0.12,
+      "g": 0.2,
+      "b": 0.25,
+      "smoothness": 0.88,
+      "metallic": 0.07,
+      "texture": ""
+    },
+    {
+      "name": "GT3_M_Glass_Inst",
+      "r": 0.12,
+      "g": 0.2,
+      "b": 0.25,
+      "smoothness": 0.88,
+      "metallic": 0.07,
+      "texture": ""
+    },
+    {
+      "name": "GT3_d_red",
+      "r": 0.68,
+      "g": 0.055,
+      "b": 0.04,
+      "smoothness": 0.65,
+      "metallic": 0.05,
+      "texture": ""
+    },
+    {
+      "name": "GT3_glass",
+      "r": 0.12,
+      "g": 0.2,
+      "b": 0.25,
+      "smoothness": 0.88,
+      "metallic": 0.07,
+      "texture": ""
+    },
+    {
+      "name": "GT3_interior_black",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_interior_blue",
+      "r": 0.09,
+      "g": 0.19,
+      "b": 0.38,
+      "smoothness": 0.35,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_interior_bump",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_interior_carbon",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_interior_color1",
+      "r": 0.24,
+      "g": 0.25,
+      "b": 0.26,
+      "smoothness": 0.35,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_FAbric_Base_Inst1",
+      "r": 0.24,
+      "g": 0.25,
+      "b": 0.26,
+      "smoothness": 0.35,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_interior_color2",
+      "r": 0.24,
+      "g": 0.25,
+      "b": 0.26,
+      "smoothness": 0.35,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_interior_color3",
+      "r": 0.24,
+      "g": 0.25,
+      "b": 0.26,
+      "smoothness": 0.35,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_interior_decals",
+      "r": 0.24,
+      "g": 0.25,
+      "b": 0.26,
+      "smoothness": 0.35,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_interior_glossy",
+      "r": 0.24,
+      "g": 0.25,
+      "b": 0.26,
+      "smoothness": 0.35,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_interior_red",
+      "r": 0.68,
+      "g": 0.055,
+      "b": 0.04,
+      "smoothness": 0.65,
+      "metallic": 0.05,
+      "texture": ""
+    },
+    {
+      "name": "GT3_interior_silver",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_interior_speakers",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_lights",
+      "r": 0.87,
+      "g": 0.91,
+      "b": 0.95,
+      "smoothness": 0.8,
+      "metallic": 0.12,
+      "texture": ""
+    },
+    {
+      "name": "GT3_logo",
+      "r": 0.83,
+      "g": 0.84,
+      "b": 0.82,
+      "smoothness": 0.58,
+      "metallic": 0.07,
+      "texture": ""
+    },
+    {
+      "name": "GT3_plate",
+      "r": 0.83,
+      "g": 0.84,
+      "b": 0.82,
+      "smoothness": 0.58,
+      "metallic": 0.07,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Car_Glass_Inst1",
+      "r": 0.12,
+      "g": 0.2,
+      "b": 0.25,
+      "smoothness": 0.88,
+      "metallic": 0.07,
+      "texture": ""
+    },
+    {
+      "name": "GT3_light_red1",
+      "r": 0.68,
+      "g": 0.055,
+      "b": 0.04,
+      "smoothness": 0.65,
+      "metallic": 0.05,
+      "texture": ""
+    },
+    {
+      "name": "GT3_M_Glass_Inst1",
+      "r": 0.12,
+      "g": 0.2,
+      "b": 0.25,
+      "smoothness": 0.88,
+      "metallic": 0.07,
+      "texture": ""
+    },
+    {
+      "name": "GT3_light_red",
+      "r": 0.68,
+      "g": 0.055,
+      "b": 0.04,
+      "smoothness": 0.65,
+      "metallic": 0.05,
+      "texture": ""
+    },
+    {
+      "name": "GT3_material",
+      "r": 0.24,
+      "g": 0.25,
+      "b": 0.26,
+      "smoothness": 0.35,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_Mat_Red",
+      "r": 0.68,
+      "g": 0.055,
+      "b": 0.04,
+      "smoothness": 0.65,
+      "metallic": 0.05,
+      "texture": ""
+    },
+    {
+      "name": "GT3_silver",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_silver_d",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Tire__Inst2",
+      "r": 0.065,
+      "g": 0.069,
+      "b": 0.073,
+      "smoothness": 0.17,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Tire__Inst2_1",
+      "r": 0.065,
+      "g": 0.069,
+      "b": 0.073,
+      "smoothness": 0.17,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Tire__Inst2_2",
+      "r": 0.065,
+      "g": 0.069,
+      "b": 0.073,
+      "smoothness": 0.17,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Tire__Inst",
+      "r": 0.065,
+      "g": 0.069,
+      "b": 0.073,
+      "smoothness": 0.17,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Metal1_Inst_2",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Anisotrop_Base1",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Tire__Inst_4",
+      "r": 0.065,
+      "g": 0.069,
+      "b": 0.073,
+      "smoothness": 0.17,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_Mat_Black_2_5",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_silver_6",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_Mat_Black_2_7",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_Mat_Black_2_8",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_silver_9",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Metal1_Inst_10",
+      "r": 0.55,
+      "g": 0.58,
+      "b": 0.61,
+      "smoothness": 0.61,
+      "metallic": 0.55,
+      "texture": ""
+    },
+    {
+      "name": "GT3_MA_Tire__Inst2_4",
+      "r": 0.065,
+      "g": 0.069,
+      "b": 0.073,
+      "smoothness": 0.17,
+      "metallic": 0,
+      "texture": ""
+    },
+    {
+      "name": "GT3_Mat_Black_2_10",
+      "r": 0.1,
+      "g": 0.105,
+      "b": 0.112,
+      "smoothness": 0.28,
+      "metallic": 0,
+      "texture": ""
+    }
+  ]
+}

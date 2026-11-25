@@ -54,6 +54,72 @@ public static class ModelLoader
         return model;
     }
 
+    // Uploaded legacy FBX has several biped copies. Only use a complete, bound skeleton.
+    public static Transform TrySpawnUploadedPlayer(Transform wrapper,float height,out RigMap map)
+    {
+        map=null;
+        var prefab=Resources.Load<GameObject>("ExternalArt/People/CustomPlayer/CustomPlayer");
+        if(prefab==null)return null;
+        var model=Object.Instantiate(prefab,wrapper,false).transform;
+        try
+        {
+            var index=BonePoser.Index(model);
+            var skins=model.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            var bound=new HashSet<Transform>();
+            foreach(var skin in skins) if(skin.sharedMesh!=null) foreach(var bone in skin.bones) if(bone!=null)bound.Add(bone);
+            Transform pelvis=null;int best=-1;
+            foreach(string suffix in new[]{"001","001_ncl1_1","","_ncl1_1"})
+            {
+                string[] Pair(string part){return new[]{"Bip001 L "+part+suffix,"Bip001 R "+part+suffix};}
+                var candidate=new RigMap{pelvis="Bip001 Pelvis"+suffix,head="Bip001 Head"+suffix,thigh=Pair("Thigh"),calf=Pair("Calf"),foot=Pair("Foot"),toe=suffix.StartsWith("001")?Pair("Toe"):Pair("Toe0"),upper=Pair("UpperArm"),lower=Pair("Forearm"),hand=Pair("Hand")};
+                var required=new List<string>{candidate.pelvis,candidate.head};
+                foreach(var names in new[]{candidate.thigh,candidate.calf,candidate.foot,candidate.upper,candidate.lower,candidate.hand})required.AddRange(names);
+                bool complete=true;int score=0;
+                foreach(var name in required){if(!index.TryGetValue(name,out Transform bone)){complete=false;break;}if(bound.Contains(bone))score++;}
+                if(!complete||score<8||score<=best)continue;
+                pelvis=index[candidate.pelvis];map=candidate;best=score;
+            }
+            if(map==null||pelvis==null)throw new System.InvalidOperationException("No complete bound biped found");
+            // Match only the selected skeleton; do not render overlapping alternate body copies.
+            int visible=0;
+            foreach(var skin in skins)
+            {
+                bool match=false;
+                foreach(var bone in skin.bones)if(bone!=null&&(bone==pelvis||bone.IsChildOf(pelvis))){match=true;break;}
+                if(skin.name.ToLowerInvariant().Contains("eye_shell"))match=false;
+                skin.enabled=match&&skin.sharedMesh!=null&&skin.gameObject.activeInHierarchy;
+                if(skin.enabled)visible++;
+            }
+            foreach(var renderer in model.GetComponentsInChildren<MeshRenderer>(true))renderer.enabled=false;
+            if(visible==0)throw new System.InvalidOperationException("No visible skin on chosen rig");
+            foreach(var a in model.GetComponentsInChildren<Animator>(true))a.enabled=false;
+            foreach(var a in model.GetComponentsInChildren<Animation>(true))a.enabled=false;
+            if(BonePoser.NeedsFlip(wrapper,model,map))model.localRotation=Quaternion.Euler(0,180,0)*model.localRotation;
+            Bounds b=RendererBounds(model);
+            if(b.size.y<.001f||float.IsNaN(b.size.y)||float.IsInfinity(b.size.y))throw new System.InvalidOperationException("Invalid character height");
+            model.localScale*=height/b.size.y;b=RendererBounds(model);
+            model.position+=wrapper.position-new Vector3(b.center.x,b.min.y,b.center.z);
+            foreach(var skin in skins)if(skin.enabled)
+            {
+                var materials=skin.sharedMaterials;
+                for(int i=0;i<materials.Length;i++)
+                {
+                    var src=materials[i];var m=src!=null?new Material(src):new Material(Shader.Find("Standard"));
+                    string n=(skin.name+" "+(src!=null?src.name:"")).ToLowerInvariant();
+                    if(m.mainTexture==null)
+                    {
+                        Color col=n.Contains("jeans")?new Color(.16f,.22f,.32f):n.Contains("shirt")||n.Contains("cloth")?new Color(.32f,.13f,.11f):n.Contains("shoe")||n.Contains("boot")?new Color(.085f,.08f,.075f):n.Contains("eye")?new Color(.78f,.76f,.72f):new Color(.36f,.23f,.17f);
+                        SetCol(m,col);
+                    }
+                    Matte(m);materials[i]=m;
+                }
+                skin.sharedMaterials=materials;skin.updateWhenOffscreen=true;
+            }
+            return model;
+        }
+        catch(System.Exception e){model.gameObject.SetActive(false);Object.Destroy(model.gameObject);map=null;Debug.LogWarning("Uploaded player fallback: "+e.Message);return null;}
+    }
+
     static Bounds RendererBounds(Transform t)
     {
         bool first = true;

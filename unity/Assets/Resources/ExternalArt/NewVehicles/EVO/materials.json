@@ -1,0 +1,211 @@
+{
+  "materials": [
+    {
+      "name": "Mitsubishi__Evo_",
+      "r": 0.1843137254901961,
+      "g": 0.1843137254901961,
+      "b": 0.1843137254901961,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "1CarPaintClearco",
+      "r": 0.72,
+      "g": 0.72,
+      "b": 0.74,
+      "smoothness": 0.8,
+      "metallic": 0.25,
+      "texture": ""
+    },
+    {
+      "name": "AluminiumPolishe",
+      "r": 0.8274509803921568,
+      "g": 0.8274509803921568,
+      "b": 0.8274509803921568,
+      "smoothness": 0.8,
+      "metallic": 0.65,
+      "texture": ""
+    },
+    {
+      "name": "Glass Standartda",
+      "r": 0.12,
+      "g": 0.19,
+      "b": 0.24,
+      "smoothness": 0.86,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "Mitsubishi__E1",
+      "r": 0.17254901960784313,
+      "g": 0.17254901960784313,
+      "b": 0.17254901960784313,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "black",
+      "r": 0.1450980392156863,
+      "g": 0.1450980392156863,
+      "b": 0.1450980392156863,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "24 - Default",
+      "r": 0.5843137254901961,
+      "g": 0.5843137254901961,
+      "b": 0.5843137254901961,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "VR_crohme_glossy",
+      "r": 0.5843137254901961,
+      "g": 0.5843137254901961,
+      "b": 0.5843137254901961,
+      "smoothness": 0.8,
+      "metallic": 0.65,
+      "texture": ""
+    },
+    {
+      "name": "Material #521",
+      "r": 0.5843137254901961,
+      "g": 0.5843137254901961,
+      "b": 0.5843137254901961,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "Material #521sds",
+      "r": 0.5843137254901961,
+      "g": 0.5843137254901961,
+      "b": 0.5843137254901961,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "Glass Standart_0",
+      "r": 0.12,
+      "g": 0.19,
+      "b": 0.24,
+      "smoothness": 0.86,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "MetalChromeObjec",
+      "r": 0.8274509803921568,
+      "g": 0.9372549019607843,
+      "b": 0.9882352941176471,
+      "smoothness": 0.8,
+      "metallic": 0.65,
+      "texture": ""
+    },
+    {
+      "name": "Glass Standar1",
+      "r": 0.12,
+      "g": 0.19,
+      "b": 0.24,
+      "smoothness": 0.86,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "Glass Standar2",
+      "r": 0.12,
+      "g": 0.19,
+      "b": 0.24,
+      "smoothness": 0.86,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "Material #520",
+      "r": 0.5843137254901961,
+      "g": 0.5843137254901961,
+      "b": 0.5843137254901961,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "Material #549",
+      "r": 0.5843137254901961,
+      "g": 0.5843137254901961,
+      "b": 0.5843137254901961,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "Material #990",
+      "r": 0.6392156862745098,
+      "g": 0.6392156862745098,
+      "b": 0.6392156862745098,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "20 - Default",
+      "r": 0.0392156862745098,
+      "g": 0.29411764705882354,
+      "b": 0.9529411764705882,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "Material #992",
+      "r": 1.0,
+      "g": 0.0392156862745098,
+      "b": 0.0392156862745098,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "22 - Default",
+      "r": 0.19215686274509805,
+      "g": 0.19215686274509805,
+      "b": 0.19215686274509805,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "Mitsubishi__E2",
+      "r": 1.0,
+      "g": 1.0,
+      "b": 1.0,
+      "smoothness": 0.28,
+      "metallic": 0.1,
+      "texture": "mle-whee.jpg"
+    },
+    {
+      "name": "Metal aluminium ",
+      "r": 0.13333333333333333,
+      "g": 0.13333333333333333,
+      "b": 0.13333333333333333,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    },
+    {
+      "name": "Material #971",
+      "r": 0.9137254901960784,
+      "g": 0.9137254901960784,
+      "b": 0.9137254901960784,
+      "smoothness": 0.5,
+      "metallic": 0.1,
+      "texture": ""
+    }
+  ]
+}

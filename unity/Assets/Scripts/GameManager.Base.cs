@@ -19,11 +19,14 @@ public partial class GameManager
         Box(new Vector3(-3f, 0.035f, -3f), new Vector3(6.2f, 0.03f, 3.7f), new Color(0.6f, 0.2f, 0.18f));
 
         // کاناپه و تلویزیون
+        if(!ImportedSofa(new Vector3(-3f,0f,-5.3f)))
+        {
         Color sofa = new Color(0.25f, 0.28f, 0.38f);
         Box(new Vector3(-3f, 0.35f, -5.3f), new Vector3(3.2f, 0.7f, 1.1f), sofa, true);
         Box(new Vector3(-3f, 0.9f, -5.75f), new Vector3(3.2f, 0.8f, 0.25f), sofa);
         Box(new Vector3(-4.7f, 0.55f, -5.3f), new Vector3(0.3f, 0.5f, 1.1f), sofa * 0.9f);
         Box(new Vector3(-1.3f, 0.55f, -5.3f), new Vector3(0.3f, 0.5f, 1.1f), sofa * 0.9f);
+        }
         Box(new Vector3(-3f, 0.25f, -3.2f), new Vector3(1.6f, 0.5f, 0.9f), new Color(0.35f, 0.25f, 0.18f), true);   // میز
         Box(new Vector3(-3f, 1.7f, -8.9f), new Vector3(3f, 1.7f, 0.15f), new Color(0.05f, 0.05f, 0.07f));          // تلویزیون
         Box(new Vector3(-3f, 1.7f, -8.82f), new Vector3(2.7f, 1.4f, 0.05f), new Color(0.2f, 0.45f, 0.7f));

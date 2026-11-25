@@ -146,16 +146,18 @@ public class BonePoser
 
     // حرکت: phase = فاز چرخه‌ی دویدن (رادیان)، amp = 0..1، runT = 0 (دو آروم) تا 1 (اسپرینت)، aimT = نشانه‌گیری
     // gunPos/gunRot (فضای بدنه) و دستگیره‌های اسلحه برای IK دست‌ها
-    public void Pose(float phase, float amp, float runT, float aimT, bool hasGun, Vector3 gunPos, Quaternion gunRot, Vector3 rLocal, Vector3 lLocal, float leftForce = 0f)
+    public void Pose(float phase, float amp, float runT, float aimT, bool hasGun, Vector3 gunPos, Quaternion gunRot, Vector3 rLocal, Vector3 lLocal, float leftForce = 0f, float crouch = 0f, float air = 0f, float verticalSpeed = 0f, float landing = 0f, Vector3 moveLocal = default(Vector3))
     {
         float hipAmp = Mathf.Lerp(0.70f, 1.0f, runT) * amp;                 // ~40° تا ~57°
-        float lean = runT * 9f * amp;                                        // خم شدن به جلو
+        float side=moveLocal.sqrMagnitude>.01f?moveLocal.normalized.x:0f;
+        float fore=moveLocal.sqrMagnitude>.01f?moveLocal.normalized.z:1f;
+        float lean = runT * 12f * amp + crouch * 18f + air * 8f;                                        // خم شدن به جلو
         float bob = (0.5f + 0.5f * Mathf.Cos(2f * phase)) * Mathf.Lerp(0.03f, 0.06f, runT) * amp;
 
         if (pelvis != null && pelvis.t != null)
         {
-            pelvis.t.position = wr.TransformPoint(pelvis.pos + Vector3.up * bob);
-            pelvis.t.rotation = wr.rotation * Quaternion.Euler(lean, 0f, 0f) * pelvis.rest;
+            pelvis.t.position = wr.TransformPoint(pelvis.pos + Vector3.up * (bob*(1f-air)-.40f*crouch-landing));
+            pelvis.t.rotation = wr.rotation * Quaternion.Euler(lean, Mathf.Sin(phase)*3f*amp*(1f-aimT), -side*7f*amp) * pelvis.rest;
         }
 
         for (int i = 0; i < 2; i++)
@@ -164,7 +166,12 @@ public class BonePoser
             float ang = Mathf.Sin(ph) * hipAmp;
             // زانو وقتی پا به جلو میاد (نیمه‌ی بازگشت) خیلی خم میشه
             float bend = (Mathf.Max(0f, Mathf.Cos(ph)) * Mathf.Lerp(0.55f, 1.55f, runT) + 0.08f) * amp;
-            Leg(i, ang, bend);
+            ang=Mathf.Lerp(ang,.82f+ang*.25f,crouch);
+            bend=Mathf.Lerp(bend,1.65f+bend*.2f,crouch);
+            float tuck=Mathf.Lerp(.25f,.85f,Mathf.InverseLerp(-8f,6f,verticalSpeed));
+            ang=Mathf.Lerp(ang,tuck*(i==0?1f:.65f),air);
+            bend=Mathf.Lerp(bend,(i==0?1.15f:.8f),air);
+            Leg(i, ang*Mathf.Lerp(1f,fore,aimT*(1f-air)), bend, side*Mathf.Sin(ph)*hipAmp*aimT*(1f-air));
 
             float swing = -Mathf.Sin(ph) * hipAmp * 0.95f;                    // دست مخالف پای هم‌طرف
             float eb = swing + (Mathf.Lerp(0.35f, 1.5f, runT) * amp + 0.1f);  // آرنج خم
@@ -172,14 +179,14 @@ public class BonePoser
         }
     }
 
-    void Leg(int i, float ang, float bend)
+    void Leg(int i, float ang, float bend, float lateral)
     {
         if (thigh[i] == null) return;
-        Aim(thigh[i], new Vector3(thigh[i].dir.x, -Mathf.Cos(ang), Mathf.Sin(ang)));
+        Aim(thigh[i], new Vector3(thigh[i].dir.x+lateral, -Mathf.Cos(ang), Mathf.Sin(ang)));
         if (calf[i] != null)
         {
             float ca = ang - bend;
-            Aim(calf[i], new Vector3(calf[i].dir.x, -Mathf.Cos(ca), Mathf.Sin(ca)));
+            Aim(calf[i], new Vector3(calf[i].dir.x+lateral*.65f, -Mathf.Cos(ca), Mathf.Sin(ca)));
         }
         if (foot[i] != null && foot[i].t != null) foot[i].t.rotation = wr.rotation * foot[i].rest;   // کف پا صاف
     }

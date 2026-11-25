@@ -1,0 +1,7 @@
+newmtl Shotgun_Texture
+Kd .20 .21 .22
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2

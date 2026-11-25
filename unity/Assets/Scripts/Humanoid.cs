@@ -19,6 +19,9 @@ public class Humanoid : MonoBehaviour
     int cur;
     public Vector3 gunLow = new Vector3(0.22f, 0.02f, 0.2f), gunAim = new Vector3(0.18f, 0.5f, 0.45f);
     public float speed;            // سرعت حرکت (m/s) - صاحب مدل هر فریم تنظیم می‌کنه
+    public float crouch, air, verticalSpeed;
+    public Vector3 moveLocal;
+    float landCompression, previousAir;
     public bool aiming;            // دست‌ها به سمت جلو و اسلحه بالا
     public bool handsUp;           // دست‌ها بالا (صندوقدارِ ترسیده؛ فقط آدم ساده‌ی ساخته‌شده با کد)
     public System.Action onStep;   // هر بار پا به زمین میخوره
@@ -260,14 +263,14 @@ public class Humanoid : MonoBehaviour
     // ---- مدل FBX: دویدن/راه رفتن و گرفتن اسلحه تو دست راست (و دست چپ موقع نشانه‌گیری)
     void UpdateModel(float dt)
     {
-        float runT = Mathf.Clamp01((speed - 5.5f) / 3.5f);                 // 0 = دویدن آروم، 1 = اسپرینت
-        float freq = Mathf.Lerp(1.1f, 2.4f, Mathf.Clamp01(speed / 9f));     // چرخه در ثانیه
+        float runT = Mathf.Clamp01((speed - 6f) / 6f);                 // 0 = دویدن آروم، 1 = اسپرینت
+        float freq = Mathf.Lerp(.9f, 3.0f, Mathf.Clamp01(speed / 12f));     // چرخه در ثانیه
         float prev = Mathf.Sin(mphase);
-        mphase += 2f * Mathf.PI * freq * dt * (speed > 0.15f ? 1f : 0f);
+        mphase = Mathf.Repeat(mphase + 2f * Mathf.PI * freq * dt * (speed > 0.15f && air<.5f ? 1f : 0f),2f*Mathf.PI);
         float cur2 = Mathf.Sin(mphase);
-        float amp = Mathf.Clamp01(speed / 3.5f);
-        ampS = Mathf.MoveTowards(ampS, amp, dt * 5f);
-        if (ampS > 0.25f && (cur2 > 0f) != (prev > 0f) && onStep != null) onStep();
+        float amp = Mathf.Clamp01(speed / 3.5f) * (1f-air);
+        ampS = Mathf.MoveTowards(ampS, amp, dt * 9f);
+        if (air < .1f && ampS > 0.25f && (cur2 > 0f) != (prev > 0f) && onStep != null) onStep();
 
         GunSlot slot = (slots != null && slots.Length > 0) ? slots[cur] : null;
         Vector3 sh = poser.ShoulderMid; float L = Mathf.Max(0.3f, poser.ArmLen);
@@ -276,6 +279,8 @@ public class Humanoid : MonoBehaviour
         if (slot != null) aimPos.z = Mathf.Min(0.66f * L, 0.93f * L - Mathf.Abs(slot.lLocal.z));
         Vector3 carryPos = new Vector3(sh.x + 0.30f * poser.RightSign, sh.y - 0.55f, 0.30f);
         Vector3 gunPos = Vector3.Lerp(carryPos, aimPos, aimEff);
+        gunPos.y -= .40f*crouch + landCompression;
+        gunPos += new Vector3(Mathf.Sin(mphase)*.025f,Mathf.Cos(2*mphase)*.018f,0)*ampS*(1f-.75f*aimEff);
         Quaternion gunRot = Quaternion.Slerp(Quaternion.Euler(35f, 0f, 0f), Quaternion.identity, aimEff);
         Vector3 lExtra; float leftForce;
         ApplyGunFx(dt, ref gunPos, ref gunRot, out lExtra, out leftForce);
@@ -283,20 +288,22 @@ public class Humanoid : MonoBehaviour
         gunMount.localRotation = gunRot;
 
         Vector3 rl = slot != null ? slot.rLocal : Vector3.zero, ll = slot != null ? slot.lLocal + lExtra : Vector3.zero;
-        poser.Pose(mphase, ampS, runT, aimEff, slot != null, gunPos, gunRot, rl, ll, leftForce);
+        poser.Pose(mphase, ampS, runT, aimEff, slot != null, gunPos, gunRot, rl, ll, leftForce, crouch, air, verticalSpeed, landCompression, moveLocal);
     }
 
-    void Update()
+    void LateUpdate()
     {
         float dt = Time.deltaTime;
-        aimT = Mathf.MoveTowards(aimT, aiming ? 1f : 0f, dt * 8f);
+        aimT = Mathf.MoveTowards(aimT, aiming ? 1f : 0f, dt * 12f);
+        if(previousAir>.3f && air<previousAir) landCompression=Mathf.Max(landCompression,.10f*previousAir);
+        landCompression=Mathf.MoveTowards(landCompression,0,dt*.55f); previousAir=air;
         UpdateFx(dt);
         if (poser != null) { UpdateModel(dt); return; }
-        ampS = Mathf.MoveTowards(ampS, Mathf.Clamp01(speed / 6f), dt * 6f);
+        ampS = Mathf.MoveTowards(ampS, Mathf.Clamp01(speed / 6f)*(1f-air), dt * 6f);
         phase += speed * dt * 1.2f;
 
         float sn = Mathf.Sin(phase);
-        if (ampS > 0.25f && (sn > 0f) != (lastSin > 0f) && onStep != null) onStep();
+        if (air < .1f && ampS > 0.25f && (sn > 0f) != (lastSin > 0f) && onStep != null) onStep();
         lastSin = sn;
         float swing = sn * ampS * 45f;
 
@@ -306,6 +313,14 @@ public class Humanoid : MonoBehaviour
         kneeL.localRotation = Quaternion.Euler(Mathf.Max(0f, -swing) * 1.1f, 0f, 0f);
         kneeR.localRotation = Quaternion.Euler(Mathf.Max(0f, swing) * 1.1f, 0f, 0f);
 
+        float tuck = Mathf.Lerp(20f,45f,Mathf.InverseLerp(-8f,6f,verticalSpeed));
+        float drop=.40f*crouch+landCompression;
+        hipL.localPosition=new Vector3(hipL.localPosition.x,.92f-drop,hipL.localPosition.z);
+        hipR.localPosition=new Vector3(hipR.localPosition.x,.92f-drop,hipR.localPosition.z);
+        hipL.localRotation=Quaternion.Euler(Mathf.Lerp(swing,-55f+swing*.3f,crouch)-tuck*air,0,0);
+        hipR.localRotation=Quaternion.Euler(Mathf.Lerp(-swing,-55f-swing*.3f,crouch)-tuck*.6f*air,0,0);
+        kneeL.localRotation=Quaternion.Euler(Mathf.Lerp(Mathf.Max(0f,-swing)*1.1f,100f,crouch)+65f*air,0,0);
+        kneeR.localRotation=Quaternion.Euler(Mathf.Lerp(Mathf.Max(0f,swing)*1.1f,100f,crouch)+45f*air,0,0);
         // دست‌ها: تاب خوردن مخالف پا، یا نشانه‌گیری
         Quaternion idleL = Quaternion.Euler(-swing * 0.8f, 0f, 4f);
         Quaternion idleR = Quaternion.Euler(swing * 0.8f, 0f, -4f);
@@ -323,8 +338,8 @@ public class Humanoid : MonoBehaviour
         }
 
         // بالاتنه: نوسان و کمی خم شدن به جلو موقع دویدن
-        body.localPosition = new Vector3(0f, 0.92f + Mathf.Abs(sn) * 0.04f * ampS, 0f);
-        body.localRotation = Quaternion.Euler(ampS * 5f, 0f, 0f);
+        body.localPosition = new Vector3(0f, 0.92f + Mathf.Abs(sn) * 0.04f * ampS-drop, 0f);
+        body.localRotation = Quaternion.Euler(ampS * 5f+15f*crouch+8f*air, 0f, 0f);
 
         // اسلحه: پایین کنار کمر ←→ بالا جلوی سینه
         float aimEff2 = Mathf.Max(aimT, reloadBlend);

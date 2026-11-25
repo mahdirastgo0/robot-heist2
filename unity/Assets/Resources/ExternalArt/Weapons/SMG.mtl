@@ -1,0 +1,196 @@
+newmtl Material.001
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl None
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl anel_fixacao
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl barra_corona
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl botao_corona
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl cano
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl corona
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl corpo
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl cubo
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl descarte_carredor
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl detha_corona
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl escotilha
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl fivela
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl gatilho
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl gatilho.001
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl letereiro
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl leteriro2
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl mira_frontal
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl mira_traseira
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl parafusos_
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl pente
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl pino_disparo
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl pino_do_pino_de_disparo.001
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl pino_frontal
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl pino_traseiro
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl proteçao
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl punhal
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2
+newmtl seletor
+Kd .18 .19 .20
+Ka 0.1 0.1 0.1
+Ks 0.45 0.45 0.45
+Ns 65
+d 1
+illum 2

@@ -20,9 +20,10 @@ public partial class GameManager
             cam = go.AddComponent<Camera>();
             go.AddComponent<AudioListener>();
         }
+        if(cam.GetComponent<AudioListener>()==null) cam.gameObject.AddComponent<AudioListener>();
         cam.orthographic = false;
         cam.fieldOfView = 65f;
-        cam.nearClipPlane = 0.1f; cam.farClipPlane = 600f;
+        cam.nearClipPlane = 0.1f; cam.farClipPlane = 1000f; cam.allowHDR=true; cam.allowMSAA=true;
 
         // آسمون: پانورامای ۳۶۰ درجه با خورشید و ابر
         var skyTex = Resources.Load<Texture2D>("Textures/sky_panorama");
@@ -68,7 +69,9 @@ public partial class GameManager
 
         QualitySettings.shadows = ShadowQuality.All;
         QualitySettings.shadowResolution = ShadowResolution.High;
-        QualitySettings.shadowDistance = 110f;
+        QualitySettings.shadowDistance = 150f;
+        QualitySettings.antiAliasing=4;
+        QualitySettings.masterTextureLimit=0;
         QualitySettings.shadowCascades = 4;
         QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
         DynamicGI.UpdateEnvironment();
@@ -85,6 +88,40 @@ public partial class GameManager
         return shader;
     }
 
+    Vector2 TextureTiling(string name)
+    {
+        switch(name)
+        {
+            case "asphalt": return new Vector2(2.4f,2.4f);
+            case "pavement": return new Vector2(2.1f,2.1f);
+            case "brick": return new Vector2(1.35f,1.35f);
+            case "concrete": return new Vector2(1.8f,1.8f);
+            case "plaster": return new Vector2(1.5f,1.5f);
+            case "sand": return new Vector2(2.35f,2.35f);
+            case "wood": return new Vector2(1.55f,1.55f);
+            case "metal": return new Vector2(1.15f,1.15f);
+            default: return Vector2.one;
+        }
+    }
+    void ApplyTexScale(Material m,string prop,Vector2 scale)
+    {
+        if(m.HasProperty(prop)) m.SetTextureScale(prop,scale);
+    }
+    void ApplyDetail(Material m,string albedoName,string normalName,float scale,float normalScale=.7f)
+    {
+        var detailAlb=Resources.Load<Texture2D>("Textures/"+albedoName+"_Albedo");
+        var detailNrm=Resources.Load<Texture2D>("Textures/"+normalName+"_Normal");
+        if(detailAlb!=null && m.HasProperty("_DetailAlbedoMap")) m.SetTexture("_DetailAlbedoMap",detailAlb);
+        if(detailNrm!=null && m.HasProperty("_DetailNormalMap"))
+        {
+            m.SetTexture("_DetailNormalMap",detailNrm);
+            if(m.HasProperty("_DetailNormalMapScale"))m.SetFloat("_DetailNormalMapScale",normalScale);
+            m.EnableKeyword("_DETAIL_MULX2");
+        }
+        if(m.HasProperty("_DetailAlbedoMapScale"))m.SetFloat("_DetailAlbedoMapScale",scale);
+        if(m.HasProperty("_UVSec"))m.SetFloat("_UVSec",0f);
+    }
+
     // ماده با آلبیدو + نرمال مپ از Resources/Textures/<name>_Albedo / _Normal
     Material TexMat(string name, Color tint, float smooth, float metal = 0f)
     {
@@ -92,23 +129,43 @@ public partial class GameManager
         Material m;
         if (texMats.TryGetValue(key, out m) && m != null) return m;
         m = new Material(PipeShader()) { name = name };
-        var alb = Resources.Load<Texture2D>("Textures/" + name + "_Albedo");
-        var nrm = Resources.Load<Texture2D>("Textures/" + name + "_Normal");
+        var alb = Resources.Load<Texture2D>("ExternalArt/Textures/" + name + "_Albedo") ?? Resources.Load<Texture2D>("Textures/" + name + "_Albedo");
+        var nrm = Resources.Load<Texture2D>("ExternalArt/Textures/" + name + "_Normal") ?? Resources.Load<Texture2D>("Textures/" + name + "_Normal");
+        var mask = Resources.Load<Texture2D>("ExternalArt/Textures/" + name + "_MetalSmooth");
+        var ao = Resources.Load<Texture2D>("ExternalArt/Textures/" + name + "_AO");
+        Vector2 scale=TextureTiling(name);
         if (alb != null)
         {
             if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", alb);
             if (m.HasProperty("_MainTex")) m.SetTexture("_MainTex", alb);
+            ApplyTexScale(m,"_BaseMap",scale); ApplyTexScale(m,"_MainTex",scale);
         }
         if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", tint);
         if (m.HasProperty("_Color")) m.SetColor("_Color", tint);
         if (nrm != null && m.HasProperty("_BumpMap"))
         {
             m.SetTexture("_BumpMap", nrm);
+            ApplyTexScale(m,"_BumpMap",scale);
+            if(m.HasProperty("_BumpScale"))m.SetFloat("_BumpScale", name=="asphalt"||name=="pavement"||name=="brick" ? 1.15f : .85f);
             m.EnableKeyword("_NORMALMAP");
         }
         if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", smooth);
         if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", smooth);
         if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", metal);
+        if(mask!=null && m.HasProperty("_MetallicGlossMap"))
+        {
+            m.SetTexture("_MetallicGlossMap",mask);
+            ApplyTexScale(m,"_MetallicGlossMap",scale);
+            m.EnableKeyword("_METALLICGLOSSMAP");
+            if(m.HasProperty("_GlossMapScale"))m.SetFloat("_GlossMapScale",1f);
+        }
+        if(ao!=null && m.HasProperty("_OcclusionMap")) { m.SetTexture("_OcclusionMap",ao); ApplyTexScale(m,"_OcclusionMap",scale); if(m.HasProperty("_OcclusionStrength"))m.SetFloat("_OcclusionStrength",.9f); }
+        if(name=="asphalt"||name=="pavement")ApplyDetail(m,"concrete","concrete",4.2f,.45f);
+        else if(name=="brick")ApplyDetail(m,"concrete","brick",2.4f,.55f);
+        else if(name=="plaster"||name=="concrete")ApplyDetail(m,"plaster","concrete",3.2f,.50f);
+        else if(name=="sand")ApplyDetail(m,"sand","sand",3.6f,.65f);
+        else if(name=="wood")ApplyDetail(m,"wood_grain","wood",2.2f,.55f);
+        m.enableInstancing=true;
         texMats[key] = m;
         return m;
     }
@@ -140,6 +197,7 @@ public partial class GameManager
         Face(new Vector3(0, -h.y, 0), new Vector3(h.x, 0, 0), new Vector3(0, 0, h.z), Vector3.down, s.x, s.z);
         m.SetVertices(v); m.SetNormals(n); m.SetUVs(0, uv); m.SetTriangles(t, 0);
         m.RecalculateBounds();
+        m.RecalculateTangents();
         return m;
     }
 

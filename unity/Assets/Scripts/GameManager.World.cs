@@ -78,7 +78,11 @@ public partial class GameManager
 
     void ResetRoot()
     {
-        if (root != null) Destroy(root.gameObject);
+        if (root != null) { root.gameObject.SetActive(false); Destroy(root.gameObject); }
+        personalCar = null;
+        if(seaArtMat!=null && seaArtMat.shader.name=="RobotHeist/CoastalWater")Destroy(seaArtMat);
+        seaArtMat=null;
+        bigMap = false; LastShotTime = -10f; LastShotPos = Vector3.zero;
         root = new GameObject("Level").transform;
         scnRoot = new GameObject("Scenery").transform;
         scnRoot.SetParent(root, false);
@@ -160,9 +164,11 @@ public partial class GameManager
     // جاده‌ها: x%6==0 یا y%6==0 | پیاده‌رو: حلقه‌ی دور هر بلوک | ساختمان ۳×۳ وسط هر بلوک
     void BuildGrid(LandDef d, System.Random rng)
     {
-        CW = d.bx * 6 + 1; CH = d.by * 6 + 1;
+        CW = 3 * (d.bx * 6) + 24 + 1; CH = d.by * 6 + 1;
         blocked = new bool[CW, CH];
         walkCells.Clear(); blockInfos.Clear();
+        for (int y = 0; y < CH; y++)
+            for (int x = 0; x < CW; x++) blocked[x,y] = !IslandCell(x) && y != ExitRow;
 
         var roles = new List<int>();
         for (int r = 0; r < d.mix.Length; r++)
@@ -174,18 +180,24 @@ public partial class GameManager
             int t = roles[i]; roles[i] = roles[j]; roles[j] = t;
         }
 
+        for (int island = 0; island < 3; island++)
+        {
         int n = 0;
         for (int bj = 0; bj < d.by; bj++)
             for (int bi = 0; bi < d.bx; bi++)
             {
                 int role = roles[n++];
-                var bmin = new Vector2Int(bi * 6 + 2, bj * 6 + 2);
+                // Additional islands mix residential, leisure and commercial blocks.
+                if (island > 0 && role == 4) role = island == 1 ? 6 : 7;
+                if (island > 0 && role <= 3 && rng.NextDouble() < 0.45) role = rng.Next(5, 8);
+                var bmin = new Vector2Int(IslandStart(island) + bi * 6 + 2, bj * 6 + 2);
                 blockInfos.Add(new Vector3Int(bmin.x, bmin.y, role));
                 if (role == 6) blocked[bmin.x + 1, bmin.y + 1] = true;        // پارک: فقط وسط (فواره)
                 else
                     for (int yy = 0; yy < 3; yy++)
                         for (int xx = 0; xx < 3; xx++) blocked[bmin.x + xx, bmin.y + yy] = true;
             }
+        }
         for (int y = 0; y < CH; y++)
             for (int x = 0; x < CW; x++)
                 if (!blocked[x, y]) walkCells.Add(new Vector2Int(x, y));
@@ -247,7 +259,7 @@ public partial class GameManager
         marketMult = Mathf.Round((NativeCore.LandMarketLo(idx) + (float)rng.NextDouble() * (NativeCore.LandMarketHi(idx) - NativeCore.LandMarketLo(idx))) ) / 100f;
 
         BuildGround(rng);
-        BuildSea(rng);
+        BuildArchipelago(rng);
         loadPct = 0.1f; loadText = "Roads and sidewalks..."; yield return null;
         BuildRoadMarkings();
         loadPct = 0.2f; yield return null;
@@ -294,8 +306,9 @@ public partial class GameManager
         interiorLight.shadows = LightShadows.None;
         interiorLight.enabled = false;
 
+        SpawnPersonalCar();
         OnLandReady();
-        SpawnCops(Mathf.Max(1, NativeCore.LandCopStart(idx) - NativeCore.CopStartReduction));
+        SpawnCops(Mathf.Max(3, NativeCore.LandCopStart(idx) + 2 - NativeCore.CopStartReduction));
     }
 
     void PlaceShopMarker(Vector2Int bmin, int role, System.Random rng)
@@ -312,15 +325,18 @@ public partial class GameManager
 
     void BuildGround(System.Random rng)
     {
-        float midX = (CW - 1) * Cell / 2f, midZ = (CH - 1) * Cell / 2f;
-        float sx = (CW - 1) * Cell + 14f, sz = (CH - 1) * Cell + 14f;
-        TexBox(new Vector3(midX, -0.1f, -midZ), new Vector3(sx, 0.2f, sz), TexMat("asphalt", curLand.asphalt, 0.08f), 8f, true);
+        for (int island = 0; island < 3; island++)
+        {
+            Vector3 mid = IslandCenter(island);
+            TexBox(mid + Vector3.down * 0.1f, new Vector3(IslandWidth + 14f, 0.2f, IslandDepth + 14f), TexMat("asphalt", Color.Lerp(curLand.asphalt,Color.white,.35f), 0.08f), 3.5f, true);
+        }
 
         var pave = TexMat("pavement", Color.white, 0.1f);
         Color curb = new Color(0.62f, 0.62f, 0.64f);
         for (int j = 0; j < curLand.by; j++)
-            for (int i = 0; i < curLand.bx; i++)
+            for (int i = 0; i < 3 * (curLand.bx + 2) - 2; i++)
             {
+                if (i % (curLand.bx + 2) >= curLand.bx) continue;
                 var c = CellToWorld(new Vector2Int(6 * i + 3, 6 * j + 3));
                 TexBox(new Vector3(c.x, 0f, c.z), new Vector3(5f * Cell, 0.12f, 5f * Cell), pave, 4f, true);
                 // لبه‌ی پیاده‌رو (جدول)
@@ -341,6 +357,7 @@ public partial class GameManager
             for (int x = 0; x < CW; x++)
             {
                 bool h = y % 6 == 0, v = x % 6 == 0;
+                if (!IslandCell(x)) continue;
                 if (h == v) continue;                       // چهارراه یا بلوک
                 if (h && x % 6 == 1) continue;              // جای خط عابر
                 if (v && y % 6 == 1) continue;
@@ -350,10 +367,12 @@ public partial class GameManager
             }
 
         for (int j = 0; j <= curLand.by; j++)
-            for (int i = 0; i <= curLand.bx; i++)
+            for (int i = 0; i <= 3 * (curLand.bx + 2) - 2; i++)
             {
+                int local = i % (curLand.bx + 2);
+                if (local > curLand.bx) continue;
                 Vector3 c = CellToWorld(new Vector2Int(6 * i, 6 * j));
-                if (i < curLand.bx)   // بازوی شرقی
+                if (local < curLand.bx)   // بازوی شرقی
                     for (int k = -2; k <= 2; k++)
                         Box(new Vector3(c.x + Cell, 0.02f, c.z + k * 0.7f), new Vector3(2.6f, 0.03f, 0.4f), zebra);
                 if (j < curLand.by)   // بازوی جنوبی
@@ -371,8 +390,9 @@ public partial class GameManager
         double treeChance = curLand.tier == 1 ? 1.0 : (curLand.tier == 2 ? 0.7 : 0.5);
 
         for (int j = 0; j < curLand.by; j++)
-            for (int i = 0; i < curLand.bx; i++)
+            for (int i = 0; i < 3 * (curLand.bx + 2) - 2; i++)
             {
+                if (i % (curLand.bx + 2) >= curLand.bx) continue;
                 // چراغ: دو گوشه‌ی مقابل هر بلوک (با بازوی خمیده)
                 Vector3 a = CellToWorld(new Vector2Int(6 * i + 1, 6 * j + 1)) + new Vector3(-1.4f, 0f, 1.4f);
                 Vector3 b = CellToWorld(new Vector2Int(6 * i + 5, 6 * j + 5)) + new Vector3(1.4f, 0f, -1.4f);
@@ -414,6 +434,7 @@ public partial class GameManager
         for (int n = 0; n < (CW * CH) / 55; n++)
         {
             int x = rng.Next(0, CW), y = rng.Next(0, CH);
+            if (!IslandCell(x)) continue;
             if ((x % 6 == 0) == (y % 6 == 0)) continue;
             Vector3 p = CellToWorld(new Vector2Int(x, y)) + new Vector3((float)(rng.NextDouble() - 0.5) * 0.8f, 0f, (float)(rng.NextDouble() - 0.5) * 0.8f);
             Cyl(new Vector3(p.x, 0.02f, p.z), new Vector3(0.9f, 0.015f, 0.9f), new Color(0.22f, 0.22f, 0.24f));
@@ -425,17 +446,19 @@ public partial class GameManager
             new Color(0.75f, 0.1f, 0.1f), new Color(0.1f, 0.3f, 0.7f), new Color(0.85f, 0.85f, 0.85f),
             new Color(0.1f, 0.1f, 0.12f), new Color(0.9f, 0.7f, 0.1f), new Color(0.2f, 0.5f, 0.3f)
         };
+        detailedParkedCars=0;
         int want = Mathf.RoundToInt(12f * curLand.carDensity * (CW * CH) / 625f);
         var placed = new List<Vector3>();
         for (int tries = 0, n = 0; tries < 600 && n < want; tries++)
         {
             int x = rng.Next(0, CW), y = rng.Next(0, CH);
+            if (!IslandCell(x)) continue;
             bool h = y % 6 == 0, v = x % 6 == 0;
-            if (h == v) continue;
+            if (h == v || y == ExitRow) continue;
             Vector3 p = CellToWorld(new Vector2Int(x, y));
-            float side = rng.Next(0, 2) == 0 ? 1.1f : -1.1f;
+            float side = rng.Next(0, 2) == 0 ? 2.75f : -2.75f;
             p += h ? new Vector3(0f, 0f, side) : new Vector3(side, 0f, 0f);
-            bool near = false;
+            bool near = (x < 3 && Mathf.Abs(y - ExitRow) < 3) || (x == CW - 1 && Mathf.Abs(y - ExitRow) < 3);
             foreach (var q in placed) if ((q - p).magnitude < 5f) near = true;
             if (near) continue;
             placed.Add(p);
@@ -449,6 +472,7 @@ public partial class GameManager
         var g = new GameObject("Bench").transform;
         g.SetParent(scn, false);
         g.localPosition = p; g.localRotation = Quaternion.Euler(0f, yaw, 0f);
+        if(ExternalModel("Bench",g)!=null){var box=g.gameObject.AddComponent<BoxCollider>();box.center=new Vector3(0,.45f,0);box.size=new Vector3(1.8f,.9f,.5f);return;}
         Color wood = new Color(0.45f, 0.3f, 0.18f), iron = new Color(0.15f, 0.15f, 0.17f);
         Prim(PrimitiveType.Cube, "Seat", g, new Vector3(0f, 0.5f, 0f), new Vector3(1.8f, 0.07f, 0.5f), wood, true);
         Prim(PrimitiveType.Cube, "Back", g, new Vector3(0f, 0.85f, -0.22f), new Vector3(1.8f, 0.4f, 0.06f), wood);
@@ -474,8 +498,19 @@ public partial class GameManager
             Prim(PrimitiveType.Cylinder, "Bollard", scn, p + new Vector3(k * 0.9f, 0.4f, 0f), new Vector3(0.16f, 0.4f, 0.16f), new Color(0.9f, 0.75f, 0.1f), true);
     }
 
+    int detailedParkedCars;
     void MakeCar(Vector3 pos, float yaw, Color col)
     {
+        if(detailedParkedCars<9)
+        {
+            string[] models={"SUV","Sport","Mustang"};int n=detailedParkedCars++%models.Length;
+            var visual=new GameObject("Parked imported car").transform;visual.SetParent(scn,false);visual.localPosition=pos;
+            visual.localRotation=Quaternion.Euler(0,90f-yaw,0);
+            var imported=ExternalModel(models[n],visual);
+            if(imported!=null&&FitArt(imported,new Vector3(1.85f,1.55f,4.25f),n==2?180f:0f))
+            {ApplyVehicleSurfaces(imported,n+1);var collider=visual.gameObject.AddComponent<BoxCollider>();collider.center=new Vector3(0,.75f,0);collider.size=new Vector3(1.85f,1.5f,4.25f);return;}
+            RemoveArt(visual.gameObject);
+        }
         var def = PropModels.Load("Models/Props/defender");
         if (def != null)
         {
@@ -727,6 +762,7 @@ public partial class GameManager
     void UpdateSea()
     {
         float t = Time.time;
+        if(seaArtMat!=null && seaArtMat.shader.name!="RobotHeist/CoastalWater" && seaArtMat.HasProperty("_BumpMap"))seaArtMat.SetTextureOffset("_BumpMap",new Vector2((t*.025f)%1f,(t*.012f)%1f));
         if (waveA != null) waveA.position = waveABase + new Vector3((t * 0.9f) % WaveTileA, 0f, (t * 0.5f) % WaveTileA);
         if (waveB != null) waveB.position = waveBBase + new Vector3(-((t * 0.6f) % WaveTileB), 0f, (t * 0.8f) % WaveTileB);
         for (int i = 0; i < bobbers.Count; i++)
@@ -809,7 +845,7 @@ public partial class GameManager
         var g = new GameObject("Container").transform;
         g.SetParent(scn, false);
         g.localPosition = pos; g.localRotation = Quaternion.Euler(0f, yaw, 0f);
-        Prim(PrimitiveType.Cube, "Body", g, new Vector3(0f, 1.3f, 0f), new Vector3(6f, 2.6f, 2.4f), col, true);
+        TexBox(new Vector3(0f,1.3f,0f),new Vector3(6f,2.6f,2.4f),TexMat("cargo_container",Color.Lerp(col,Color.white,.65f),.35f,.35f),6f,true,g);
         Color rib = col * 0.78f;
         for (int k = -5; k <= 5; k++)
         {
@@ -842,6 +878,7 @@ public partial class GameManager
         Color trim = Color.Lerp(wall, Color.white, 0.4f);
         Color dark = Color.Lerp(wall, Color.black, 0.5f);
 
+        if(role==5 && ImportedCityBuilding(ctr,half,h))return;
         float wallTile;
         var wallMat = WallMat(role, rng, out wallTile);
         bool hollow = role <= 3;      // مغازه‌های قابل ورود
@@ -888,7 +925,7 @@ public partial class GameManager
             Vector3 n = face == 0 ? new Vector3(0f, 0f, -1f) : face == 1 ? new Vector3(0f, 0f, 1f) : face == 2 ? new Vector3(1f, 0f, 0f) : new Vector3(-1f, 0f, 0f);
             Vector3 t = face < 2 ? new Vector3(1f, 0f, 0f) : new Vector3(0f, 0f, 1f);
             float[] offs = face < 2 ? new[] { -4.2f, -1.4f, 1.4f, 4.2f } : new[] { -3.6f, 0f, 3.6f };
-            Vector3 size = face < 2 ? new Vector3(1.5f, 1.7f, 0.12f) : new Vector3(0.12f, 1.7f, 1.5f);
+            Vector3 size = face < 2 ? new Vector3(1.5f, 1.7f, 0.07f) : new Vector3(0.07f, 1.7f, 1.5f);
             Vector3 fsize = face < 2 ? new Vector3(1.8f, 2.0f, 0.08f) : new Vector3(0.08f, 2.0f, 1.8f);
             Vector3 sill = face < 2 ? new Vector3(1.9f, 0.1f, 0.3f) : new Vector3(0.3f, 0.1f, 1.9f);
 
@@ -900,10 +937,18 @@ public partial class GameManager
                 {
                     float y = 3.6f * k + 2.1f;
                     Color glass = rng.NextDouble() < 0.4 ? LitWindow : new Color(0.15f + (float)rng.NextDouble() * 0.06f, 0.2f, 0.28f);
-                    Vector3 pos = ctr + n * (half + 0.03f) + t * o + new Vector3(0f, y, 0f);
-                    Box(pos, size, glass);
-                    Box(ctr + n * (half + 0.01f) + t * o + new Vector3(0f, y, 0f), fsize, new Color(0.1f, 0.1f, 0.12f));
-                    Box(ctr + n * (half + 0.12f) + t * o + new Vector3(0f, y - 1.05f, 0f), sill, new Color(0.75f, 0.75f, 0.78f));   // زیرپنجره
+                    Vector3 pos = ctr + n * (half + 0.15f) + t * o + new Vector3(0f, y, 0f);
+                    TexBox(pos,size,TexMat("facade_glass",Color.Lerp(glass,Color.white,.55f),.78f,.16f),2f,false);
+                    Box(ctr + n * (half + 0.07f) + t * o + new Vector3(0f, y, 0f), fsize, new Color(0.1f, 0.1f, 0.12f));
+                    Vector3 mullion=face<2?new Vector3(.055f,1.7f,.07f):new Vector3(.07f,1.7f,.055f);
+                    TexBox(pos+n*.07f,mullion,TexMat("metal",new Color(.25f,.28f,.30f),.42f,.3f),1f,false);
+                    TexBox(pos+n*.07f,face<2?new Vector3(1.5f,.055f,.07f):new Vector3(.07f,.055f,1.5f),TexMat("metal",new Color(.25f,.28f,.30f),.42f,.3f),1f,false);
+                    TexBox(ctr+n*(half+.16f)+t*o+new Vector3(0,y-1.05f,0),sill,TexMat("concrete",new Color(.88f,.85f,.80f),.12f),1f,false);
+                    if(k>0&&((int)(o*10)+k+face)%3==0)
+                    {
+                        Vector3 ac=pos+new Vector3(0,-1.48f,0)+n*.17f;
+                        TexBox(ac,face<2?new Vector3(.78f,.42f,.38f):new Vector3(.38f,.42f,.78f),TexMat("metal",new Color(.72f,.73f,.70f),.3f,.15f),1f,false);
+                    }   // زیرپنجره
                 }
         }
     }
@@ -1076,14 +1121,15 @@ public partial class GameManager
 
     void CreateCop(Vector2Int cell)
     {
-        var r = new GameObject("Cop");
+        bool riot=Wanted>=5 || (Wanted>=3 && Random.value<.55f);
+        var r = new GameObject(riot?"Riot Cop":"Cop");
         r.transform.SetParent(root, false);
         r.transform.position = CellToWorld(cell);
 
         var look = new HumanLook
         {
             skin = SkinTones[Random.Range(0, SkinTones.Length)], shirt = new Color(0.1f, 0.2f, 0.5f), pants = new Color(0.07f, 0.09f, 0.18f),
-            shoes = Color.black, hair = new Color(0.15f, 0.1f, 0.07f), cap = true, glasses = true, badge = true
+            shoes = Color.black, hair = new Color(0.15f, 0.1f, 0.07f), cap = true, glasses = true, badge = true, riot=riot
         };
         var hu = BuildHuman(r.transform, look);
         hu.gun.localScale = new Vector3(0.06f, 0.09f, 0.3f);
@@ -1092,7 +1138,7 @@ public partial class GameManager
         var col = r.AddComponent<CapsuleCollider>();
         col.height = 1.85f; col.radius = 0.35f; col.center = new Vector3(0f, 0.92f, 0f);
         var rc = r.AddComponent<RobotCop>();
-        rc.Init(this, Player, hu);
+        rc.Init(this, Player, hu, riot);
         cops.Add(rc);
     }
 }

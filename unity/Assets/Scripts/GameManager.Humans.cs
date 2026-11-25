@@ -3,7 +3,7 @@ using UnityEngine;
 public struct HumanLook
 {
     public Color skin, shirt, pants, shoes, hair;
-    public bool cap, mask, glasses, badge, bag;
+    public bool cap, mask, glasses, badge, bag, riot;
 }
 
 // ساخت مدل آدم از شکل‌های ساده: پا، زانو، تنه، سر، دست، آرنج، کوله
@@ -42,12 +42,13 @@ public partial class GameManager
         var hu = root.AddComponent<Humanoid>();
         RigMap map = police ? RigMap.Police() : RigMap.Survival();
 
-        var model = ModelLoader.SpawnCharacter(root.transform, police, police ? 1.82f : 1.85f, map);
-        if (model == null) { Destroy(root); return null; }
-
-        var poser = new BonePoser();
-        bool okBones = poser.Init(root.transform, model, map);
-        if (!okBones) Debug.LogWarning("[Models] some bones were not found; character will stay in its rest pose.");
+        // The original Survival skeleton is the rig used by the procedural animation and grip IK.
+        Transform model=ModelLoader.SpawnCharacter(root.transform,police,police?1.82f:1.85f,map);
+        if(model==null){Destroy(root);return null;}
+        var poser=new BonePoser();
+        bool okBones=false;
+        try{okBones=poser.Init(root.transform,model,map);}catch(System.Exception e){Debug.LogWarning("Character rig: "+e.Message);}
+        if(!okBones){root.SetActive(false);Destroy(root);return null;}
         string st = (police ? "police " : "player ") + "bones " + poser.FoundCount + "/11" + (okBones ? " OK" : " MISSING");
         ModelLoader.Status = ModelLoader.Status.Contains(st) ? ModelLoader.Status : (ModelLoader.Status.Length > 0 ? ModelLoader.Status + "  |  " : "") + st;
         hu.poser = poser;
@@ -63,19 +64,19 @@ public partial class GameManager
 
         // اسلحه‌ها: Glock برای تپانچه و پلیس، HK416 (با اندازه و رنگ‌های متفاوت) برای بقیه
         var list = new System.Collections.Generic.List<GunSlot>();
-        var pistol = MakeSlot(mount, "Models/Gun/glock", 1f, false, Color.white, new Vector3(0f, 1.38f, 0.42f));
+        var pistol = ExternalGun(mount,0) ?? MakeSlot(mount, "Models/Gun/glock", 1f, false, Color.white, new Vector3(0f, 1.38f, 0.42f));
         if (pistol != null)
         {
             list.Add(pistol);
             if (!police)
             {
                 var rifle = "Models/Gun/hk416";
-                list.Add(MakeSlot(mount, rifle, 0.72f, false, Color.white, new Vector3(0f, 1.40f, 0.30f)));                        // SMG
-                list.Add(MakeSlot(mount, rifle, 0.85f, true, new Color(0.25f, 0.17f, 0.1f), new Vector3(0f, 1.40f, 0.28f)));       // شاتگان (قهوه‌ای)
-                list.Add(MakeSlot(mount, rifle, 1.0f, false, Color.white, new Vector3(0f, 1.40f, 0.26f)));                        // Assault Rifle
-                list.Add(MakeSlot(mount, rifle, 1.1f, true, new Color(0.06f, 0.06f, 0.07f), new Vector3(0f, 1.40f, 0.24f)));      // LMG
+                list.Add(ExternalGun(mount,1) ?? MakeCustomGun(mount,1));                        // SMG
+                list.Add(ExternalGun(mount,2) ?? MakeCustomGun(mount,2));       // شاتگان (قهوه‌ای)
+                list.Add(ExternalGun(mount,3) ?? MakeSlot(mount, rifle, 1.0f, false, Color.white, new Vector3(0f, 1.40f, 0.26f)));                        // Assault Rifle
+                list.Add(ExternalGun(mount,4) ?? MakeCustomGun(mount,4));      // LMG
             }
-            if (list.Contains(null)) list = new System.Collections.Generic.List<GunSlot> { pistol };   // اگه HK416 لود نشد فقط تپانچه
+            if (!police && list[3] == null) list[3] = MakeCustomGun(mount,4);   // اگه HK416 لود نشد فقط تپانچه
             hu.slots = list.ToArray();
         }
         hu.ShowGun(0);
@@ -85,7 +86,7 @@ public partial class GameManager
     Humanoid BuildHuman(Transform parent, HumanLook L, bool allowModel = true)
     {
         var modelHuman = allowModel ? BuildModelHuman(parent, L.badge) : null;   // badge = پلیس
-        if (modelHuman != null) return modelHuman;
+        if (modelHuman != null) { if(L.riot) AddRiotGear(modelHuman); return modelHuman; }
 
         var root = new GameObject("Human");
         root.transform.SetParent(parent, false);
@@ -167,6 +168,16 @@ public partial class GameManager
         hu.gunMount = mount;
         var gun = Prim(PrimitiveType.Cube, "Gun", mount, new Vector3(0f, 0f, 0.15f), new Vector3(0.06f, 0.09f, 0.3f), new Color(0.15f, 0.15f, 0.17f));
         hu.gun = gun.transform;
+        if (L.mask)
+        {
+            var pistol = ExternalGun(mount,0) ?? MakeSlot(mount,"Models/Gun/glock",1f,false,Color.white,Vector3.zero);
+            if(pistol!=null)
+            {
+                var rifle=ExternalGun(mount,3)??MakeSlot(mount,"Models/Gun/hk416",1f,false,Color.white,Vector3.zero);
+                hu.slots=new[]{pistol,ExternalGun(mount,1)??MakeCustomGun(mount,1),ExternalGun(mount,2)??MakeCustomGun(mount,2),rifle??MakeCustomGun(mount,4),ExternalGun(mount,4)??MakeCustomGun(mount,4)};
+                hu.ShowGun(0);
+            }
+        }
         return hu;
     }
 

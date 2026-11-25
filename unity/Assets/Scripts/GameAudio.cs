@@ -7,7 +7,27 @@ public class GameAudio : MonoBehaviour
     public static GameAudio I { get; private set; }
     const int SR = 44100;
 
-    AudioSource sfx, musicBase, musicCity;
+    AudioSource sfx, musicBase, musicCity, siren, gunSource;
+    readonly AudioClip[] combatShots = new AudioClip[NativeCore.WeaponCount];
+    float previewEngineUntil, previewEngineStart; int previewWeapon;
+    const int ExhaustBands=6;
+    readonly AudioSource[] exhaustSources=new AudioSource[ExhaustBands];
+    readonly AudioClip[,] exhaustClips=new AudioClip[4,ExhaustBands];
+    readonly AudioClip[] exhaustStarts=new AudioClip[4];
+    static readonly string[] ExhaustIds={"g63","gt3","pickup","evo"};
+    static readonly float[,] ExhaustRPM={{700,1400,2500,3600,4800,6000},{900,1800,3200,4900,6600,8500},{650,1200,2100,3000,4200,5200},{850,1700,3000,4200,5700,7000}};
+    static readonly float[] ExhaustGain={.70f,.68f,.70f,.66f};
+    static readonly float[] GearLimits={.16f,.29f,.45f,.63f,.82f,1.04f};
+    float smoothedRPM, smoothedLoad; int gear=0;
+    int ExhaustProfile(int type){return type<=1?0:type==5?2:type==6?3:1;}
+    readonly float[] poolGain=new float[40];
+    static readonly float[] EngineTune={.85f,.78f,1.05f,1.10f,1.15f,.76f,1f};
+    AudioClip horn,crash;
+    AudioSource ignitionSource,hornSource,crashSource;
+    float nextCrash, crashGain;
+    bool seatedLast;
+    int playingEngineType=-1;
+    float engineRatio, engineThrottle; int engineType; bool engineActive; int wanted;
     readonly AudioClip[] shot = new AudioClip[NativeCore.WeaponCount];
     AudioClip copShot, click, empty, cash, pickup, hurt, alarm, step, thud, coin;
     float baseTarget, cityTarget;
@@ -31,7 +51,8 @@ public class GameAudio : MonoBehaviour
     {
         I = this;
         sfx = gameObject.AddComponent<AudioSource>();
-        sfx.playOnAwake = false; sfx.spatialBlend = 0f;
+        sfx.playOnAwake = false; sfx.spatialBlend = 0f; sfx.priority=128;
+        gunSource=gameObject.AddComponent<AudioSource>(); gunSource.playOnAwake=false; gunSource.spatialBlend=0f; gunSource.priority=0; gunSource.volume=1f;
         reloadSrc = gameObject.AddComponent<AudioSource>();
         reloadSrc.playOnAwake = false; reloadSrc.spatialBlend = 0f;
         musicBase = NewMusicSource();
@@ -43,6 +64,20 @@ public class GameAudio : MonoBehaviour
         }
         BuildSfx();
         LoadSamples();
+        siren=NewLoop("Audio/police_siren");siren.priority=64;
+        for(int b=0;b<ExhaustBands;b++)
+        {
+            exhaustSources[b]=NewMusicSource();exhaustSources[b].priority=8+b;
+            exhaustSources[b].dopplerLevel=0f;
+        }
+        for(int p=0;p<ExhaustIds.Length;p++)
+        {
+            for(int b=0;b<ExhaustBands;b++)exhaustClips[p,b]=LoadVehicleClip("ExhaustV2/"+ExhaustIds[p]+"_rpm"+b);
+            exhaustStarts[p]=LoadVehicleClip("ExhaustV2/"+ExhaustIds[p]+"_start");
+        }
+        horn=LoadVehicleClip("ExhaustV2/horn");crash=LoadVehicleClip("ExhaustV2/crash");
+        ignitionSource=VehicleSource();hornSource=VehicleSource();crashSource=VehicleSource();
+        Debug.Log("Robot Heist: Exhaust V2 active (4 vehicle profiles, no legacy audio fallback)");
         StartCoroutine(BuildMusic());
     }
 
@@ -53,11 +88,115 @@ public class GameAudio : MonoBehaviour
         return s;
     }
 
-    void Update()
+    AudioSource NewLoop(string path)
     {
+        var src=NewMusicSource();src.clip=Resources.Load<AudioClip>(path);
+        if(src.clip==null) Debug.LogError("Missing required audio resource: "+path);
+        else src.clip.LoadAudioData();
+        return src;
+    }
+    AudioClip LoadVehicleClip(string name)
+    {
+        var clip=Resources.Load<AudioClip>("Audio/"+name);
+        if(clip==null)Debug.LogError("Missing vehicle recording: "+name);else clip.LoadAudioData();return clip;
+    }
+    AudioSource VehicleSource(){var src=gameObject.AddComponent<AudioSource>();src.playOnAwake=false;src.loop=false;src.spatialBlend=0f;src.priority=12;return src;}
+    public void VehicleStart(int type)
+    {
+        if(ignitionSource==null)return;
+        ignitionSource.Stop();ignitionSource.clip=exhaustStarts[ExhaustProfile(type)];
+        ignitionSource.volume=.65f*GameOptions.Vehicles;ignitionSource.pitch=1f;
+        if(ignitionSource.clip!=null)ignitionSource.Play();
+    }
+    public void VehicleHorn(){if(hornSource==null||horn==null||hornSource.isPlaying)return;hornSource.volume=.8f*GameOptions.Vehicles;hornSource.clip=horn;hornSource.Play();}
+    public void VehicleCrash(float speed)
+    {
+        if(crashSource==null||crash==null||speed<3.5f||Time.unscaledTime<nextCrash)return;
+        nextCrash=Time.unscaledTime+.8f;crashSource.Stop();crashSource.clip=crash;
+        crashGain=Mathf.Lerp(.35f,.9f,Mathf.Clamp01(speed/18f));
+        crashSource.volume=crashGain*GameOptions.Vehicles;
+        crashSource.Play();
+    }
+    public void EngineState(bool active,float ratio,float throttle,int type){engineActive=active;engineRatio=Mathf.Clamp01(ratio);engineThrottle=Mathf.Clamp01(throttle);engineType=Mathf.Clamp(type,0,EngineTune.Length-1);}
+    public void SirenState(int level){wanted=level;}
+    public void PreviewEngine(){previewEngineStart=Time.unscaledTime;previewEngineUntil=previewEngineStart+6f;}
+    public void PreviewGun(){Shot(previewWeapon);previewWeapon=(previewWeapon+1)%NativeCore.WeaponCount;}
+    void LoopGain(AudioSource src,float target,float pitch){
+        if(src==null||src.clip==null)return;
+        src.pitch=pitch; src.volume=Mathf.MoveTowards(src.volume,target,Time.unscaledDeltaTime*4f);
+        if(target>0.001f&&!src.isPlaying)src.Play();
+        if(src.volume<.001f&&target<=0f&&src.isPlaying)src.Stop();
+    }
+    void LateUpdate()
+    {
+        var manager=GetComponent<GameManager>();
+        var player=manager!=null?manager.Player:null;
+        bool seated=manager!=null&&manager.State==GameState.City&&player!=null&&player.Driving;
+        bool active=seated&&!manager.InputBlocked;
+        if(!seated&&seatedLast){ignitionSource.Stop();hornSource.Stop();crashSource.Stop();}
+        seatedLast=seated;
+        if(!active){ignitionSource.Stop();hornSource.Stop();crashSource.Stop();}
+        EngineState(active,active?player.VehicleSpeedRatio:0f,active?player.VehicleThrottle:0f,active?player.VehicleType:0);
+        bool preview=Time.unscaledTime<previewEngineUntil;
+        int desired=preview&&manager!=null?manager.ExhaustPreviewVehicleType:engineType;
+        bool audible=engineActive||preview;
+        int profile=ExhaustProfile(desired);
+        float ratio=engineRatio, throttle=engineThrottle;
+        if(preview)
+        {
+            float elapsed=Time.unscaledTime-previewEngineStart;
+            ratio=elapsed<.6f?0f:elapsed<4.3f?Mathf.InverseLerp(.6f,4.3f,elapsed)*.92f:Mathf.Lerp(.92f,0f,Mathf.InverseLerp(4.3f,6f,elapsed));
+            throttle=elapsed>.6f&&elapsed<4.3f?1f:0f;
+        }
+        if(audible&&playingEngineType!=desired)
+        {
+            for(int b=0;b<ExhaustBands;b++)
+            {
+                var source=exhaustSources[b];source.Stop();source.volume=0f;
+                source.clip=exhaustClips[profile,b];
+            }
+            playingEngineType=desired;gear=0;smoothedRPM=ExhaustRPM[profile,0];smoothedLoad=0;
+        }
+        if(audible)
+        {
+            // Arcade gear model: six ratios, hysteresis on upshift/downshift, smooth tachometer.
+            var limits=GearLimits;
+            while(gear<limits.Length-1&&ratio>limits[gear]*(throttle>.55f?.96f:.80f))gear++;
+            while(gear>0&&ratio<limits[gear-1]*.69f)gear--;
+            float red=ExhaustRPM[profile,ExhaustBands-1], idle=ExhaustRPM[profile,0];
+            float mechanical=Mathf.Clamp01(ratio/limits[gear]);
+            float requested=Mathf.Lerp(idle,red,Mathf.Clamp01(mechanical*.94f+throttle*.085f));
+            if(ratio<.025f)requested=Mathf.Lerp(idle,idle+red*.15f,throttle);
+            smoothedRPM=Mathf.MoveTowards(smoothedRPM,requested,red*(requested>smoothedRPM?1.7f:2.25f)*Time.unscaledDeltaTime);
+            smoothedLoad=Mathf.MoveTowards(smoothedLoad,throttle,Time.unscaledDeltaTime*4f);
+            float band=0f;
+            for(int b=0;b<ExhaustBands-1;b++)
+            {
+                if(smoothedRPM>=ExhaustRPM[profile,b])band=b+Mathf.InverseLerp(ExhaustRPM[profile,b],ExhaustRPM[profile,b+1],smoothedRPM);
+            }
+            float startup=ignitionSource.isPlaying?.45f:1f;
+            float level=GameOptions.Vehicles*ExhaustGain[profile]*startup*Mathf.Lerp(.46f,1f,smoothedLoad);
+            for(int b=0;b<ExhaustBands;b++)
+            {
+                float weight=Mathf.Sin(Mathf.PI*.5f*Mathf.Clamp01(1f-Mathf.Abs(band-b)));
+                // Only the adjacent RPM bands are audible; pitch tracks crank speed continuously.
+                float pitch=Mathf.Clamp(smoothedRPM/ExhaustRPM[profile,b],.45f,2.25f);
+                LoopGain(exhaustSources[b],weight*level,pitch);
+            }
+        }
+        else
+        {
+            for(int b=0;b<ExhaustBands;b++)LoopGain(exhaustSources[b],0f,exhaustSources[b].pitch);
+            gear=0;
+        }
+        sfx.volume=GameOptions.Effects;reloadSrc.volume=.85f*GameOptions.Effects;gunSource.volume=GameOptions.Effects;
+        if(footSource!=null){footSource.volume=.35f*GameOptions.Effects;if(manager==null||manager.InputBlocked||seated)StopSteps();}
+        for(int i=0;i<pool.Length;i++)pool[i].volume=poolGain[i]*GameOptions.Effects;
+        ignitionSource.volume=.65f*GameOptions.Vehicles;hornSource.volume=.75f*GameOptions.Vehicles;crashSource.volume=crashGain*GameOptions.Vehicles;
+        LoopGain(siren,wanted>0?(.10f+.045f*wanted)*GameOptions.Effects:0f,1f);
         float step = Time.unscaledDeltaTime * 0.6f;
-        musicBase.volume = Mathf.MoveTowards(musicBase.volume, musicOn ? baseTarget : 0f, step);
-        musicCity.volume = Mathf.MoveTowards(musicCity.volume, musicOn ? cityTarget : 0f, step);
+        musicBase.volume = Mathf.MoveTowards(musicBase.volume, musicOn ? baseTarget*GameOptions.Music : 0f, step);
+        musicCity.volume = Mathf.MoveTowards(musicCity.volume, musicOn ? cityTarget*GameOptions.Music : 0f, step);
     }
 
     public void SetMood(float baseVol, float cityVol) { baseTarget = baseVol; cityTarget = cityVol; }
@@ -73,7 +212,13 @@ public class GameAudio : MonoBehaviour
 
     void LoadSamples()
     {
-        for (int w = 0; w < NativeCore.WeaponCount; w++) shotV[w] = LoadSet("Audio/shot_" + w + "_", 3);
+        string[] names={"pistol","smg","shotgun","rifle","lmg"};
+        for (int w = 0; w < NativeCore.WeaponCount; w++) {
+            shotV[w] = LoadSet("Audio/shot_" + w + "_", 3);
+            combatShots[w]=Resources.Load<AudioClip>("Audio/combat_"+names[w]);
+            if(combatShots[w]==null) Debug.LogError("Missing combat audio: "+names[w]);
+            else combatShots[w].LoadAudioData();
+        }
         farV = LoadSet("Audio/shotfar_", 2);
         for (int w = 0; w < NativeCore.WeaponCount; w++) reloadW[w] = Resources.Load<AudioClip>("Audio/reload_w" + w);
         equipW = Resources.Load<AudioClip>("Audio/equip");
@@ -97,7 +242,7 @@ public class GameAudio : MonoBehaviour
     {
         if (c == null) return;
         var s = FreeSource();
-        s.Stop(); s.clip = c; s.volume = vol; s.pitch = pitch;
+        s.Stop(); s.clip = c; int index=System.Array.IndexOf(pool,s); if(index>=0)poolGain[index]=vol; s.volume = vol*GameOptions.Effects; s.pitch = pitch;
         s.Play();
     }
 
@@ -118,15 +263,18 @@ public class GameAudio : MonoBehaviour
         return pool[best];
     }
 
+    static void PlaySpatial(AudioClip clip,Vector3 pos,float gain){if(clip!=null && GameOptions.Effects>0f)AudioSource.PlayClipAtPoint(clip,pos,gain*GameOptions.Effects);}
+
     static float Jit() { return Random.Range(0.97f, 1.03f); }
 
     // ---------------------------------------------------------------- Play
     public void Shot(int weapon)
     {
         int wi = Mathf.Clamp(weapon, 0, shotV.Length - 1);
-        var c = Pick(shotV[wi]);
-        if (c != null) Play(c, ShotVol[wi] * Random.Range(0.92f, 1f), Jit());
-        else sfx.PlayOneShot(shot[Mathf.Clamp(weapon, 0, shot.Length - 1)], 0.9f);
+        var c = combatShots[wi] ?? Pick(shotV[wi]) ?? shot[wi];
+        if(c==null) return;
+        gunSource.volume=GameOptions.Effects;
+        gunSource.PlayOneShot(c,ShotVol[wi]*(wi==1||wi==4 ? .72f : .90f));
     }
 
     // تیر پلیس: نزدیک = تپانچه‌ی واضح، دور = صدای خفه با پژواک بیشتر
@@ -135,9 +283,9 @@ public class GameAudio : MonoBehaviour
         float dist = 0f;
         var cam = Camera.main;
         if (cam != null) dist = Vector3.Distance(cam.transform.position, pos);
-        var c = dist > 35f ? Pick(farV) : Pick(shotV[0]);
+        var c = combatShots[0] ?? (dist > 35f ? Pick(farV) : Pick(shotV[0]));
         if (c == null) c = copShot;
-        AudioSource.PlayClipAtPoint(c, pos, dist > 35f ? 1f : 0.9f);
+        PlaySpatial(c, pos, dist > 35f ? 1f : 0.9f);
     }
 
     public void Reload(int weapon)
@@ -145,7 +293,7 @@ public class GameAudio : MonoBehaviour
         AudioClip c = reloadW[Mathf.Clamp(weapon, 0, reloadW.Length - 1)];
         if (c == null) c = weapon == 0 ? reloadPistol : weapon == 2 ? reloadShotgun : reloadRifle;
         if (c == null) { sfx.PlayOneShot(click, 0.7f); return; }
-        reloadSrc.Stop(); reloadSrc.clip = c; reloadSrc.volume = 0.85f; reloadSrc.pitch = 1f; reloadSrc.Play();
+        reloadSrc.Stop(); reloadSrc.clip = c; reloadSrc.volume = 0.85f*GameOptions.Effects; reloadSrc.pitch = 1f; reloadSrc.Play();
     }
 
     public void ReloadStop() { if (reloadSrc != null) reloadSrc.Stop(); }
@@ -153,7 +301,7 @@ public class GameAudio : MonoBehaviour
     public void Shell(Vector3 pos)
     {
         var c = Pick(shellV);
-        if (c != null) AudioSource.PlayClipAtPoint(c, pos, 0.35f);
+        if (c != null) PlaySpatial(c, pos, 0.35f);
     }
 
     public void Click() { sfx.PlayOneShot(click, 0.7f); }
@@ -163,12 +311,18 @@ public class GameAudio : MonoBehaviour
     public void Pickup() { sfx.PlayOneShot(pickup, 0.8f); }
     public void Hurt() { if (hurtW != null) Play(hurtW, 0.9f, Jit()); else sfx.PlayOneShot(hurt, 0.9f); }
     public void Alarm() { sfx.PlayOneShot(alarm, 0.55f); }
-    public void Step() { var c = Pick(stepV); if (c != null) Play(c, 0.35f, Random.Range(0.9f, 1.1f)); else sfx.PlayOneShot(step, 0.25f); }
-    public void Thud(Vector3 pos) { AudioSource.PlayClipAtPoint(bodyHit != null ? bodyHit : thud, pos, 0.8f); }
-    public void ImpactBody(Vector3 pos) { AudioSource.PlayClipAtPoint(bodyHit != null ? bodyHit : thud, pos, 0.9f); }
-    public void ImpactWall(Vector3 pos) { var c = Pick(wallV); if (c != null) AudioSource.PlayClipAtPoint(c, pos, 0.8f); }
-    public void Ricochet(Vector3 pos) { if (ricochetW != null) AudioSource.PlayClipAtPoint(ricochetW, pos, 0.6f); }
-    public void CopDown(Vector3 pos) { AudioSource.PlayClipAtPoint(copDownW != null ? copDownW : thud, pos, 0.9f); }
+    AudioSource footSource;
+    public void StopSteps(){if(footSource!=null)footSource.Stop();}
+    public void Step() {
+        if(engineActive)return;
+        if(footSource==null){footSource=gameObject.AddComponent<AudioSource>();footSource.playOnAwake=false;footSource.spatialBlend=0f;footSource.priority=160;}
+        footSource.Stop();footSource.clip=Pick(stepV)??step;footSource.volume=.35f*GameOptions.Effects;footSource.pitch=Random.Range(.9f,1.1f);footSource.Play();
+    }
+    public void Thud(Vector3 pos) { PlaySpatial(bodyHit != null ? bodyHit : thud, pos, 0.8f); }
+    public void ImpactBody(Vector3 pos) { PlaySpatial(bodyHit != null ? bodyHit : thud, pos, 0.9f); }
+    public void ImpactWall(Vector3 pos) { var c = Pick(wallV); if (c != null) PlaySpatial(c, pos, 0.8f); }
+    public void Ricochet(Vector3 pos) { if (ricochetW != null) PlaySpatial(ricochetW, pos, 0.6f); }
+    public void CopDown(Vector3 pos) { PlaySpatial(copDownW != null ? copDownW : thud, pos, 0.9f); }
 
     // ---------------------------------------------------------------- SFX synthesis
     static AudioClip Make(string name, float[] d)
